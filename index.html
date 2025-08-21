@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Simple Page</title>
+  <meta name="description" content="A minimal starter web page.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:,">
+  <meta name="color-scheme" content="light dark">
+  <script src="script.js" defer></script>
+  <!--
+    Build on this simple, responsive starter. Keep it lightweight and accessible.
+  -->
+  <style>
+    /* Fallback critical styles if CSS fails to load */
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji"; margin: 0; }
+  </style>
+  
+  <!-- Open Graph (optional) -->
+  <meta property="og:title" content="My Simple Page">
+  <meta property="og:description" content="A clean, responsive starter you can build on.">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <h1 class="site-title">My Simple Page</h1>
+      <nav class="nav" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#contact">Contact</a>
+        <button id="theme-toggle" class="btn" aria-pressed="false" title="Toggle color theme">Toggle theme</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero" aria-labelledby="hero-title">
+      <h2 id="hero-title">Welcome</h2>
+      <p>A clean, responsive starter you can build on.</p>
+      <button id="cta" class="btn primary">Say hi</button>
+    </section>
+
+    <section id="features" class="features" aria-labelledby="features-title">
+      <h2 id="features-title" class="sr-only">Features</h2>
+      <article class="card">
+        <h3>Fast</h3>
+        <p>No frameworks, just HTML, CSS, and JS.</p>
+      </article>
+      <article class="card">
+        <h3>Responsive</h3>
+        <p>Looks great on phones and desktops.</p>
+      </article>
+      <article class="card">
+        <h3>Accessible</h3>
+        <p>Semantic markup and high contrast.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <small>© <span id="year"></span> Your Name</small>
+    </div>
+  </footer>
+</body>
+</html>
+
