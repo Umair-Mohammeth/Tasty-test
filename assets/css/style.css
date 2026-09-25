@@ -1,6 +1,7 @@
 /* Black Coffin — Gothic Coffee | Full System */
 
 :root {
+  --font-site: 'IM Fell English', 'Palatino Linotype', Palatino, Georgia, serif;
   --bg: #070709;
   --bg-soft: #101012;
   --bg-card: #18181b;
@@ -24,6 +25,36 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Main site only: medieval italic Roman letterforms */
+body.site-font {
+  font-family: var(--font-site);
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+body.site-font h1,
+body.site-font h2,
+body.site-font h3,
+body.site-font h4,
+body.site-font .brand-name,
+body.site-font .brand-mark,
+body.site-font .nav-link,
+body.site-font .btn,
+body.site-font .eyebrow,
+body.site-font .stat strong,
+body.site-font .mobile-nav a,
+body.site-font .site-footer a,
+body.site-font input,
+body.site-font button,
+body.site-font .cart-head h3,
+body.site-font .order-id,
+body.site-font .visit-card h3,
+body.site-font .contact-form h3,
+body.site-font .hero-title,
+body.site-font .section-head h2 {
+  font-family: var(--font-site);
+  font-style: italic;
 }
 a { color: inherit; }
 img { display: block; max-width: 100%; }

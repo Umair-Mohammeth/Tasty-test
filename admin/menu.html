@@ -41,7 +41,7 @@
         <input type="hidden" id="m-edit-id">
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.6rem">
           <input id="m-name" placeholder="Name * — Midnight Espresso" required style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
-          <input id="m-price" type="number" step="0.01" min="0" placeholder="Price * — 4.50" required style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+          <input id="m-price" type="number" step="1" min="0" placeholder="Price (Rs) * — 650" required style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
           <select id="m-cat" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
             <option value="espresso">espresso</option><option value="brew">brew</option><option value="cold">cold</option><option value="pastry">pastry</option>
           </select>
@@ -60,7 +60,7 @@
 
       <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem; overflow:auto">
         <table class="admin-table" id="menu-table">
-          <thead><tr><th>#</th><th>Image</th><th>Name / ID</th><th>Cat</th><th>Price</th><th>Badge</th><th style="min-width:260px">Actions</th></tr></thead>
+          <thead><tr><th>#</th><th>Image</th><th>Name / ID</th><th>Cat</th><th>Price (LKR)</th><th>Badge</th><th style="min-width:260px">Actions</th></tr></thead>
           <tbody id="menu-tbody"></tbody>
         </table>
         <p id="menu-empty" class="muted small center hidden" style="padding:0.8rem">No items.</p>
@@ -83,7 +83,7 @@
             <td><img src="${m.img}" alt="" style="width:44px; height:44px; object-fit:cover; border-radius:6px; border:1px solid var(--border)"></td>
             <td><div style="font-weight:600">${m.name}</div><div class="small muted" style="font-family:monospace">${m.id}</div><div class="small muted" style="max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${m.desc}</div></td>
             <td><span class="small" style="background:var(--bg-soft); border:1px solid var(--border); padding:0.15rem 0.4rem; border-radius:999px">${m.cat}</span></td>
-            <td style="font-weight:700">$${Number(m.price).toFixed(2)}</td>
+            <td style="font-weight:700">${formatPrice(m.price)}</td>
             <td class="small muted">${m.badge||'—'}</td>
             <td>
               <div style="display:flex; gap:0.3rem; flex-wrap:wrap">

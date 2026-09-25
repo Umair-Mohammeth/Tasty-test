@@ -7,17 +7,17 @@
   <meta name="description" content="Black Coffin Coffee — Gothic specialty coffee shop. Dark roasts, cold brews & artisan pastries.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
   <link rel="icon" href="data:,">
   <meta name="color-scheme" content="dark">
   <script src="assets/js/script.js" defer></script>
 </head>
-<body>
+<body class="site-font">
   <div class="top-bar">
     <div class="container top-bar-inner">
-      <span>◼ Open daily 07:00 — 23:00 • Free delivery over $35</span>
-      <span class="top-bar-right">📍 13 Raven Alley, Downtown • ☎ (555) 013-1313</span>
+      <span>◼ Open daily 07:00 — 23:00 • Free delivery over Rs 3,500 • <span id="sl-clock">Sri Lanka time</span></span>
+      <span class="top-bar-right">📍 13 Raven Alley, Colombo 03 • ☎ +94 11 234 5678</span>
     </div>
   </div>
 
@@ -108,7 +108,7 @@
     <div class="visit-grid">
       <div class="visit-card">
         <h3>Visit the Crypt</h3>
-        <p class="muted">13 Raven Alley, Downtown<br>Behind the old cinema, black awning.</p>
+          <p class="muted">13 Raven Alley, Colombo 03<br>Behind the old cinema, black awning.</p>
         <div class="hours">
           <div><span>Mon – Thu</span><span>07:00 – 23:00</span></div>
           <div><span>Fri – Sat</span><span>07:00 – 01:00</span></div>
@@ -117,12 +117,13 @@
         <a href="pages/visit.html" class="btn btn-ghost full">Hours, map & contact →</a>
       </div>
       <div class="visit-card">
-        <h3>Your orders</h3>
-        <p class="muted">Track pickup/delivery, re-order, view history.</p>
-        <div id="orders-list" class="orders-list" style="max-height:220px; margin:0.8rem 0">
-          <p class="muted small center" style="padding:1rem">No orders yet. Order from <a href="pages/menu.html" style="color:var(--accent-light)">Menu</a>.</p>
+        <h3>Order Status</h3>
+        <p class="muted">Order details are kept private to our staff, manager and admin. To check an order, call the shop or ask at the counter with your order ID.</p>
+        <div class="hours">
+          <div><span>Call to check</span><span>+94 11 234 5678</span></div>
+          <div><span>Ask in store</span><span>Show your order ID</span></div>
         </div>
-        <button id="clear-orders" class="btn btn-ghost small-btn" style="font-size:0.75rem">Clear history</button>
+        <a href="pages/visit.html" class="btn btn-ghost full">Hours, map & contact →</a>
       </div>
     </div>
   </section>
@@ -177,15 +178,15 @@
     </div>
     <div class="cart-foot">
       <div class="cart-totals">
-        <div><span>Subtotal</span><span id="cart-subtotal">$0.00</span></div>
-        <div><span>Delivery</span><span id="cart-delivery">Calculated at checkout</span></div>
-        <div class="total"><span>Total</span><span id="cart-total">$0.00</span></div>
+        <div><span>Subtotal</span><span id="cart-subtotal">Rs 0</span></div>
+        <div><span>Delivery</span><span id="cart-delivery">Pickup — free</span></div>
+        <div class="total"><span>Total</span><span id="cart-total">Rs 0</span></div>
       </div>
       <div class="cart-options">
         <label><input type="radio" name="order-type" value="pickup" checked> Pickup (15 min)</label>
-        <label><input type="radio" name="order-type" value="delivery"> Delivery (+$3.50)</label>
+        <label><input type="radio" name="order-type" value="delivery"> Delivery (+Rs 450)</label>
       </div>
-      <button id="checkout-btn" class="btn btn-primary full">Checkout • <span id="checkout-total">$0.00</span></button>
+      <button id="checkout-btn" class="btn btn-primary full">Checkout • <span id="checkout-total">Rs 0</span></button>
       <p class="small muted center">Secure checkout • Pay on pickup or card</p>
     </div>
   </aside>
@@ -196,10 +197,10 @@
       <div id="checkout-summary" class="checkout-summary"></div>
       <div class="form-row">
         <input type="text" id="checkout-name" placeholder="Full name *" required>
-        <input type="tel" id="checkout-phone" placeholder="Phone *" required>
+        <input type="tel" id="checkout-phone" placeholder="Phone * — 077 123 4567" required>
       </div>
       <input type="email" id="checkout-email" placeholder="Email for receipt *" required>
-      <input type="text" id="checkout-address" placeholder="Delivery address — required if delivery" class="hidden" aria-label="Delivery address">
+      <input type="text" id="checkout-address" placeholder="Delivery address in Colombo — required if delivery" class="hidden" aria-label="Delivery address">
       <textarea id="checkout-notes" rows="2" placeholder="Notes — e.g. 'extra hot, no sugar'"></textarea>
       <div class="pay-methods">
         <p class="eyebrow" style="font-size:0.65rem; margin-bottom:0.4rem">PAYMENT METHOD</p>
@@ -218,7 +219,7 @@
       <div id="stripe-info" class="hidden small muted" style="background:var(--accent-ghost); padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(217,119,6,0.25)">Static mock — no backend.</div>
       <div class="modal-actions">
         <button type="button" id="modal-cancel" class="btn btn-ghost">Cancel</button>
-        <button type="submit" id="place-order" class="btn btn-primary">Place Order • <span id="modal-total">$0.00</span></button>
+        <button type="submit" id="place-order" class="btn btn-primary">Place Order • <span id="modal-total">Rs 0</span></button>
       </div>
       <p id="checkout-status" class="form-status"></p>
     </form>
