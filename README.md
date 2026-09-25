@@ -7,7 +7,26 @@ Just open `index.html` in a browser.
 - Site: `index.html` (Home) → `pages/menu.html` → `pages/story.html` → `pages/visit.html`
 - Staff / Manager / Admin: `admin/login.html` (or `admin.html`) → pick role + password → Dashboard / Menu / Orders / Inbox / Settings
 
-Works offline via `file://`. All data in `localStorage` (`bc-menu`, `bc-orders`, `bc-messages`, `bc-newsletter`).
+Works offline via `file://`. No server, no install, no build step.
+
+## Shop details
+- 13 Raven Alley, Colombo 03 — phone `+94 11 234 5678`
+- Open daily 07:00–23:00 (Fri–Sat to 01:00)
+- Delivery fee Rs 450, free over Rs 3,500
+- Menu prices LKR 500–900
+
+## Data (localStorage)
+| Key | Used for |
+| --- | --- |
+| `bc-menu` | Menu items (name, price in LKR, category, badge, description, image) |
+| `bc-cart` | Customer cart |
+| `bc-orders` | Orders — visible only in the staff/manager/admin panel |
+| `bc-messages` | Contact form messages |
+| `bc-newsletter` | Newsletter emails |
+| `bc-admin-users` | Role accounts: password, enabled flag, session limit |
+| `bc-admin-locks` | Failed-login counters and lock expiry per role |
+
+Session state (`bc-admin`, `bc-admin-login`, `bc-admin-last`) lives in `sessionStorage` and is cleared when the browser tab closes.
 
 ## Users
 | User | Login | Can do |
@@ -53,8 +72,8 @@ Prices in LKR (`Rs`), dates/times in `Asia/Colombo` (UTC+5:30, SLST) on both sit
 ├── admin/
 │   ├── index.html          # Role dashboard (Staff / Manager / Admin)
 │   ├── menu.html           # Menu manager (read-only for staff)
-│   ├── orders.html
-│   ├── inbox.html
+│   ├── orders.html         # Order details, status updates (delete = manager+)
+│   ├── inbox.html          # Contact messages + newsletter (staff read-only)
 │   ├── settings.html       # Admin only — accounts, limits, data tools
 │   ├── login.html          # Role + password login
 │   └── admin.js            # Shared admin logic, roles + permissions (static only)
@@ -70,7 +89,14 @@ Changes sync to site via `localStorage` polling (800ms) + `storage`/`visibilityc
 After changing prices to LKR, use **Reset to default** in the menu manager once so old USD-style prices are replaced.
 
 ## Payments
-Mock only: Pay on pickup / Card `4242 4242 4242 4242` / Stripe mock. No backend.
+Mock only: Pay on pickup / Card `4242 4242 4242 4242` / Stripe mock. No backend, no real charge.
+
+## Troubleshooting
+- **Old prices still showing as USD-style** → admin Menu Manager → *Reset to default*, then reload the site tab.
+- **Menu edits not appearing on site** → site and admin must run in the same browser profile; the site polls `bc-menu` every 800 ms.
+- **Locked out of login** → wait 10 minutes, or sign in as admin and use *Clear all login locks* in Settings.
+- **"Session expired" loop** → the idle limit for your role is shorter than the break; sign in again to reset it.
+- **Fonts/images look wrong offline** → Google Fonts and Unsplash need internet; the rest of the site works offline.
 
 ## Font
 Main site uses **IM Fell English** (medieval Roman italic), scoped by `body.site-font` in `assets/css/style.css`. Admin keeps Inter/Cinzel. To change it, edit `--font-site` in `assets/css/style.css`.
