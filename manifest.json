@@ -1,0 +1,15 @@
+{
+  "name": "Black Coffin",
+  "short_name": "Black Coffin",
+  "description": "Gothic specialty coffee shop",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#070709",
+  "theme_color": "#d97706",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzEiIHdpZHRoLWVtYWlsPSJzY2hlbWFfdmVyc2lvbiI+PGNpcmNsZSB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC3d444amWVyIiB2ZXJzaW9uPSIxLjEiPgogICAgPHRpdGxlPlF1YW50aW5nIEV2ZXN0ZWQ8L3RpdGxlPgogICAgPHRyYW5zZm9ybSBvZmZzZXQ9ImluZm8uZ3oiIC8+CiAgICA8dHJhbnNmb3JtIHR5cGU9InRpdGxlIiBjeT0iMTIuaXAiPgogICAgICAgIDI6MDsgMjpcbiAgICAgICAgOjI6MjwvdHJhbnNmb3JtPgogICAgICAgIDQ6Mzo0MDsgNTo0OzwvdHJhbnNmb3JtPgogICAgICAgIDg6Ojg1OzwvdHJhbnNmb3JtPgogICAgICAgIDk6OTs5OzwvdHJhbnNmb3JtPgogICAgICAgIDM6Mzo1NDsgMTo1NDs8L3RyYW5zZm9ybT4KCiAgICA8L2NpcmNsZT4K",
+      "sizes": "192x192"
+    }
+  ]
+}

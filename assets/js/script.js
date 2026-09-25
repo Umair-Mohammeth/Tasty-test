@@ -84,6 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const CART_KEY = 'bc-cart';
   const ORDERS_KEY = 'bc-orders';
+  const FAVORITES_KEY = 'bc-favorites';
+  const BACKUP_KEYS = ['bc-menu','bc-cart','bc-orders','bc-messages','bc-newsletter','bc-favorites'];
   let cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
   const pendingQty = {};
 
@@ -93,12 +95,42 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function getOrders() { return JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]'); }
   function saveOrders(orders) { localStorage.setItem(ORDERS_KEY, JSON.stringify(orders)); }
+  function getFavorites() { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); }
+  function saveFavorites(favs) { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs)); }
+  function toggleFavorite(id) {
+    const favs = getFavorites();
+    const idx = favs.indexOf(id);
+    if (idx === -1) favs.push(id); else favs.splice(idx, 1);
+    saveFavorites(favs);
+    renderMenu();
+  }
+  function isFavorite(id) { return getFavorites().includes(id); }
 
+  let lunrIndex = null;
+  function buildLunrIndex() {
+    if (!window.lunr) return;
+    lunrIndex = window.lunr(function() {
+      this.ref('id');
+      this.field('name');
+      this.field('desc');
+      this.field('cat');
+      menu.forEach(m => this.add(m));
+    });
+  }
   function filteredMenu() {
+    const favs = getFavorites();
     return menu.filter(m => {
-      const matchCat = activeFilter === 'all' || m.cat === activeFilter;
+      const matchCat = activeFilter === 'all' || (activeFilter === 'favorites' ? favs.includes(m.id) : m.cat === activeFilter);
       const q = searchQuery.trim().toLowerCase();
-      const matchSearch = !q || m.name.toLowerCase().includes(q) || m.desc.toLowerCase().includes(q);
+      let matchSearch = !q;
+      if (!matchSearch) {
+        if (lunrIndex) {
+          const results = lunrIndex.search(q);
+          matchSearch = results.some(r => r.ref === m.id);
+        } else {
+          matchSearch = m.name.toLowerCase().includes(q) || m.desc.toLowerCase().includes(q);
+        }
+      }
       return matchCat && matchSearch;
     });
   }
@@ -108,14 +140,18 @@ document.addEventListener('DOMContentLoaded', () => {
     grid.innerHTML = '';
     if (items.length === 0) { emptyEl.classList.remove('hidden'); return; }
     emptyEl.classList.add('hidden');
+    const favFilterBtn = $('#fav-filter');
+    if (favFilterBtn) favFilterBtn.style.display = getFavorites().length ? 'inline-flex' : 'none';
     items.forEach(item => {
       const qty = pendingQty[item.id] || 1;
+      const fav = isFavorite(item.id);
       const card = document.createElement('article');
       card.className = 'card';
       card.innerHTML = `
         <div class="card-img">
           <img src="${item.img}" alt="${item.name}" loading="lazy">
           ${item.badge ? `<span class="badge">${item.badge}</span>` : ''}
+          <button class="heart-btn" data-fav="${item.id}" aria-label="${fav ? 'Remove from favorites' : 'Add to favorites'}" style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); border:none; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.1rem; color:${fav ? '#ef4444' : '#fff'}; transition:color 0.2s">${fav ? '♥' : '♡'}</button>
         </div>
         <div class="card-body">
           <div class="card-top">
@@ -142,9 +178,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const inc = e.target.closest('[data-inc]');
       const dec = e.target.closest('[data-dec]');
       const add = e.target.closest('[data-add]');
+      const fav = e.target.closest('[data-fav]');
       if (inc) { const id = inc.getAttribute('data-inc'); pendingQty[id] = Math.min(9, (pendingQty[id] || 1) + 1); renderMenu(); }
       else if (dec) { const id = dec.getAttribute('data-dec'); pendingQty[id] = Math.max(1, (pendingQty[id] || 1) - 1); renderMenu(); }
       else if (add) { const id = add.getAttribute('data-add'); const qty = pendingQty[id] || 1; addToCart(id, qty); toast(`${qty} × ${menu.find(m=>m.id===id).name} added`); }
+      else if (fav) { const id = fav.getAttribute('data-fav'); toggleFavorite(id); }
     });
   }
   filterBtns.forEach(btn => btn.addEventListener('click', () => {
@@ -320,12 +358,52 @@ document.addEventListener('DOMContentLoaded', () => {
       checkoutStatus.textContent=`Order ${orderId} placed! Total ${formatPrice(total)} — ${isDelivery?'Delivery 35-50 min':'Pickup 15 min'}.`;
       cart=[]; saveCart();
       toast(`Order ${orderId} confirmed †`);
+      const printBtn = document.createElement('button');
+      printBtn.className = 'btn btn-ghost small-btn';
+      printBtn.textContent = 'Print receipt';
+      printBtn.style.marginLeft = '0.5rem';
+      printBtn.onclick = () => printReceipt(order);
+      const actions = document.querySelector('.modal-actions');
+      if (actions) actions.appendChild(printBtn);
       setTimeout(()=>{ modal.close(); checkoutStatus.textContent=''; checkoutForm.reset(); if(mockFields) mockFields.classList.add('hidden'); if(stripeInfo) stripeInfo.classList.add('hidden'); if(placeBtn) placeBtn.disabled=false; }, 2200);
       if(placeBtn) placeBtn.disabled=false;
     });
   }
 
-  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+  function printReceipt(order) {
+    const win = window.open('', '_blank');
+    win.document.write(`
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Receipt ${order.id}</title>
+<style>
+body{font-family:monospace; max-width:320px; margin:0 auto; padding:1rem; background:#fff; color:#000}
+h3{text-align:center; margin:0.5rem 0}
+hr{border:none; border-top:1px dashed #000; margin:0.5rem 0}
+.row{display:flex; justify-content:space-between; font-size:0.85rem}
+.total{font-weight:bold; font-size:1rem; border-top:2px solid #000; padding-top:0.3rem}
+.small{font-size:0.75rem; color:#666}
+@media print{@page{margin:1rem} body{padding:0} .no-print{display:none}}
+</style></head><body>
+<h3>BLACK COFFIN</h3>
+<div class="small">13 Raven Alley, Colombo 03 | +94 11 234 5678</div>
+<hr>
+<div class="row"><span>${order.id}</span><span>${formatSLDateTime(order.date)}</span></div>
+<div class="row"><span>${order.customer.name}</span><span>${order.orderType}</span></div>
+<div class="row"><span>${order.customer.phone}</span><span>${order.paymentMethod}</span></div>
+<hr>
+${order.items.map(i=>`<div class="row"><span>${i.name} ×${i.qty}</span><span>${formatPrice(i.price * i.qty)}</span></div>`).join('')}
+<hr>
+<div class="row"><span>Subtotal</span><span>${formatPrice(order.subtotal)}</span></div>
+<div class="row"><span>Delivery</span><span>${order.deliveryFee ? formatPrice(order.deliveryFee) : 'Free'}</span></div>
+<div class="row total"><span>Total</span><span>${formatPrice(order.total)}</span></div>
+<hr>
+<div class="small">Thank you for your order!</div>
+<button class="no-print" onclick="window.print()" style="margin-top:1rem; padding:0.5rem 1rem; width:100%">Print / Save as PDF</button>
+</body></html>
+`);
+    win.document.close();
+    win.focus();
+  }
 
   // Contact
   const contactForm=$('#contact'); const formStatus=$('#form-status');
@@ -352,7 +430,17 @@ document.addEventListener('DOMContentLoaded', () => {
   window.BC_SAVE_MENU = saveMenu;
   window.BC_DEFAULT_MENU = DEFAULT_MENU;
   window.BC_CHECK_MENU = checkMenuUpdate;
+  window.BC_EXPORT_DATA = () => {
+    const data = {};
+    BACKUP_KEYS.forEach(k => { data[k] = localStorage.getItem(k); });
+    return data;
+  };
+  window.BC_IMPORT_DATA = (data) => {
+    BACKUP_KEYS.forEach(k => { if (data[k] !== undefined) localStorage.setItem(k, data[k]); });
+    location.reload();
+  };
   // init
+  buildLunrIndex();
   renderMenu(); renderCart();
   // force check shortly after load
   setTimeout(checkMenuUpdate, 300);

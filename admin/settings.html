@@ -69,6 +69,18 @@
         </div>
 
         <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
+          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.6rem">Data Backup & Restore</h3>
+          <p class="small muted">Export all site + admin data as JSON. Import a previously exported file to restore.</p>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem">
+            <button id="export-data" class="btn btn-primary small-btn">Export all data</button>
+            <label class="btn btn-ghost small-btn" style="cursor:pointer">Import data
+              <input type="file" id="import-file" accept=".json" hidden onchange="handleImport(this.files[0])">
+            </label>
+          </div>
+          <p id="backup-status" class="form-status small" style="margin-top:0.4rem"></p>
+        </div>
+
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
           <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.6rem">What each role can do</h3>
           <table class="admin-table">
             <thead><tr><th>Role</th><th>Access</th></tr></thead>
@@ -137,6 +149,30 @@
           localStorage.removeItem('bc-orders'); localStorage.removeItem('bc-menu'); localStorage.removeItem('bc-messages'); localStorage.removeItem('bc-newsletter'); alert('Cleared. Reload pages to see defaults.');
         }
       });
+      document.getElementById('export-data').addEventListener('click', ()=>{
+        const data = window.BC_EXPORT_DATA();
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'black-coffin-backup.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById('backup-status').textContent = 'Exported successfully';
+      });
+      window.handleImport = (file) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target.result);
+            window.BC_IMPORT_DATA(data);
+          } catch(err) {
+            document.getElementById('backup-status').textContent = 'Import failed: invalid JSON';
+          }
+        };
+        reader.readAsText(file);
+      };
     }
   </script>
 </body>
