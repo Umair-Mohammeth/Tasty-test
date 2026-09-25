@@ -12,7 +12,7 @@
   <header class="site-header">
     <div class="container header-inner">
       <a href="index.html" class="brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">ORDERS</span></span></a>
-      <nav class="nav"><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
+      <nav class="nav"><span id="role-badge" class="badge" style="position:static" hidden></span><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
     </div>
   </header>
   <div class="admin-layout">
@@ -22,18 +22,18 @@
         <a href="menu.html">◈ Menu</a>
         <a href="orders.html">⬡ Orders</a>
         <a href="inbox.html">✉ Inbox</a>
-        <a href="settings.html">⚙ Settings</a>
+        <a href="settings.html" data-roles="admin">⚙ Settings</a>
         <div class="nav-sep"></div>
         <a href="../index.html">← View site</a>
       </nav>
     </aside>
     <main class="admin-main">
       <h1 class="admin-page-title">Orders</h1>
-      <p class="admin-page-sub">Search, update status, delete — stored in <code>bc-orders</code>.</p>
+      <p class="admin-page-sub" id="orders-sub">Search, update status, delete — stored in <code>bc-orders</code>.</p>
 
       <div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-bottom:1rem">
         <input id="admin-search" placeholder="Search — id, name, phone..." style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.9rem; border-radius:999px; min-width:240px; flex:1; max-width:320px">
-        <button id="seed-btn" class="btn btn-ghost small-btn">Seed demo</button>
+        <button id="seed-btn" class="btn btn-ghost small-btn" data-need="export">Seed demo</button>
         <span id="orders-count" class="small muted" style="align-self:center"></span>
       </div>
 
@@ -48,7 +48,10 @@
   </div>
   <script src="admin.js"></script>
   <script>
-    if(!requireAuth()) {} else {
+    if(!requireAuth('orders.view')) {} else {
+      if(!can('orders.delete')){
+        document.getElementById('orders-sub').textContent = 'Order queue for staff — update status here. Deleting orders is manager/admin only.';
+      }
       function render(){
         const orders=getOrders();
         const q=(document.getElementById('admin-search').value||'').toLowerCase();
@@ -68,7 +71,7 @@
             <td><select data-status="${o.id}" style="background:var(--bg-soft); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:0.3rem">
               <option ${o.status==='pending'?'selected':''}>pending</option><option ${o.status==='preparing'?'selected':''}>preparing</option><option ${o.status==='ready'?'selected':''}>ready</option><option ${o.status==='delivered'?'selected':''}>delivered</option>
             </select></td>
-            <td><button data-del="${o.id}" style="background:transparent; border:1px solid var(--border); color:#ef4444; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer">Delete</button></td>
+            <td>${can('orders.delete') ? `<button data-del="${o.id}" style="background:transparent; border:1px solid var(--border); color:#ef4444; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer">Delete</button>` : `<span class="small muted">staff view</span>`}</td>
           </tr>
         `).join('');
         tb.querySelectorAll('select[data-status]').forEach(s=> s.addEventListener('change', e=>{

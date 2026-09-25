@@ -17,6 +17,7 @@
       </a>
       <nav class="nav">
         <span id="sl-clock" class="small muted">Sri Lanka time</span>
+        <span id="role-badge" class="badge" style="position:static" hidden></span>
         <a href="../index.html" class="nav-link">Site</a>
         <button id="admin-logout" class="btn btn-ghost">Logout</button>
       </nav>
@@ -29,18 +30,18 @@
         <a href="menu.html">◈ Menu</a>
         <a href="orders.html">⬡ Orders</a>
         <a href="inbox.html">✉ Inbox</a>
-        <a href="settings.html">⚙ Settings</a>
+        <a href="settings.html" data-roles="admin">⚙ Settings</a>
         <div class="nav-sep"></div>
         <a href="../index.html">← View site</a>
       </nav>
     </aside>
     <main class="admin-main">
-      <h1 class="admin-page-title">Dashboard — Orders & Rituals</h1>
-      <p class="admin-page-sub">Overview from <code>localStorage</code> — updates instantly from site.</p>
+      <h1 class="admin-page-title" id="dash-title">Dashboard</h1>
+      <p class="admin-page-sub" id="dash-sub">Overview from <code>localStorage</code> — updates instantly from site.</p>
 
       <div class="stat-grid">
         <div class="stat-card"><strong id="stat-total">0</strong><span>Total orders</span></div>
-        <div class="stat-card"><strong id="stat-revenue">Rs 0</strong><span>Revenue (LKR)</span></div>
+        <div class="stat-card" id="card-revenue"><strong id="stat-revenue">Rs 0</strong><span>Revenue (LKR)</span></div>
         <div class="stat-card"><strong id="stat-pending">0</strong><span>Pending</span></div>
         <div class="stat-card"><strong id="stat-today">0</strong><span>Today</span></div>
       </div>
@@ -48,9 +49,9 @@
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem">
         <div class="stat-card">
           <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.5rem">Menu</h3>
-          <p class="small muted"><span id="menu-count">0</span> items — <a href="menu.html" style="color:var(--accent-light)">Manage →</a></p>
+          <p class="small muted"><span id="menu-count">0</span> items — <a href="menu.html" style="color:var(--accent-light)"><span id="menu-link-label">Manage</span> →</a></p>
           <div style="display:flex; gap:0.5rem; margin-top:0.6rem">
-            <a href="menu.html" class="btn btn-primary small-btn">Add / Edit</a>
+            <a href="menu.html" class="btn btn-primary small-btn" id="menu-cta">Add / Edit</a>
             <button id="export-btn" class="btn btn-ghost small-btn">Export all</button>
           </div>
         </div>
@@ -59,7 +60,7 @@
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
             <a href="orders.html" class="btn btn-ghost small-btn">View orders</a>
             <a href="inbox.html" class="btn btn-ghost small-btn">Messages (<span id="msg-quick">0</span>)</a>
-            <button id="seed-btn" class="btn btn-ghost small-btn">Seed demo order</button>
+            <button id="seed-btn" class="btn btn-ghost small-btn" data-need="export">Seed demo order</button>
           </div>
           <p class="small muted" style="margin-top:0.6rem">Inbox: <span id="nl-quick">0</span> newsletter subs</p>
         </div>
@@ -74,12 +75,51 @@
         <p id="no-recent" class="small muted center" style="padding:0.8rem">No orders yet.</p>
         <a href="orders.html" class="btn btn-ghost small-btn" style="margin-top:0.6rem">Go to Orders →</a>
       </div>
+
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem; margin-top:1rem">
+        <h3 style="font-family:Cinzel; font-size:1rem; margin-bottom:0.6rem">My account</h3>
+        <p class="small muted">
+          Role: <strong id="acc-role">—</strong> • Session limit: <strong id="acc-session">—</strong> • Last login: <strong id="acc-login">—</strong> • Status: <strong id="acc-status">—</strong>
+        </p>
+        <form id="pass-form" style="display:grid; gap:0.5rem; max-width:340px; margin-top:0.7rem">
+          <input id="pass-old" type="password" placeholder="Current password" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+          <input id="pass-new" type="password" placeholder="New password (6+ characters)" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+          <input id="pass-new2" type="password" placeholder="Repeat new password" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+          <button type="submit" class="btn btn-primary small-btn">Change my password</button>
+          <p id="pass-status" class="form-status small"></p>
+        </form>
+      </div>
     </main>
   </div>
   <script src="admin.js"></script>
   <script>
     if(!requireAuth()) {}
     else {
+      const u = currentUser();
+      document.getElementById('dash-title').textContent = `${u.label} Dashboard`;
+      document.getElementById('dash-sub').textContent = u.role === 'staff'
+        ? 'Order queue, order details and inbox. Menu is read-only, revenue and settings are hidden.'
+        : u.role === 'manager'
+          ? 'Revenue, menu management, orders and inbox. Settings are admin-only.'
+          : 'Full control: revenue, menu, orders, inbox, settings and data tools.';
+      if(!can('reports.view')) document.getElementById('card-revenue').classList.add('hidden');
+      if(!can('menu.edit')){
+        document.getElementById('menu-cta').textContent = 'View menu';
+        document.getElementById('menu-link-label').textContent = 'View';
+      }
+      document.getElementById('acc-role').textContent = `${u.label} (${u.role})`;
+      document.getElementById('acc-session').textContent = `${sessionMins()} min idle`;
+      document.getElementById('acc-login').textContent = lastLogin() ? formatSLDateTime(lastLogin()) : 'this session';
+      document.getElementById('acc-status').textContent = u.enabled === false ? 'disabled' : 'active';
+      document.getElementById('pass-form').addEventListener('submit', e=>{
+        e.preventDefault();
+        const oldP=document.getElementById('pass-old').value, n1=document.getElementById('pass-new').value, n2=document.getElementById('pass-new2').value;
+        const st=document.getElementById('pass-status');
+        if(n1!==n2){ st.textContent='New passwords do not match.'; return; }
+        const res=changeOwnPassword(oldP, n1);
+        st.textContent=res.msg;
+        if(res.ok) document.getElementById('pass-form').reset();
+      });
       function slDayKey(iso){
         try{
           return new Intl.DateTimeFormat('en-CA', { timeZone: SL_TZ, year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date(iso));

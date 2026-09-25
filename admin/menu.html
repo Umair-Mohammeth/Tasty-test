@@ -12,7 +12,7 @@
   <header class="site-header">
     <div class="container header-inner">
       <a href="index.html" class="brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">MENU</span></span></a>
-      <nav class="nav"><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
+      <nav class="nav"><span id="role-badge" class="badge" style="position:static" hidden></span><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
     </div>
   </header>
   <div class="admin-layout">
@@ -22,14 +22,14 @@
         <a href="menu.html">◈ Menu</a>
         <a href="orders.html">⬡ Orders</a>
         <a href="inbox.html">✉ Inbox</a>
-        <a href="settings.html">⚙ Settings</a>
+        <a href="settings.html" data-roles="admin">⚙ Settings</a>
         <div class="nav-sep"></div>
         <a href="../index.html">← View site</a>
       </nav>
     </aside>
     <main class="admin-main">
       <h1 class="admin-page-title">Menu Manager</h1>
-      <p class="admin-page-sub">Add / remove / rename / move / change items — saved to <code>bc-menu</code>. Site updates on next load.</p>
+      <p class="admin-page-sub" id="menu-sub">Add / remove / rename / move / change items — saved to <code>bc-menu</code>. Site updates on next load.</p>
 
       <div style="display:flex; gap:0.5rem; margin-bottom:0.8rem; flex-wrap:wrap">
         <button id="menu-reset" class="btn btn-ghost small-btn">Reset to default</button>
@@ -69,7 +69,14 @@
   </div>
   <script src="admin.js"></script>
   <script>
-    if(!requireAuth()) {} else {
+    if(!requireAuth('menu.view')) {} else {
+      const canEdit = can('menu.edit');
+      if(!canEdit){
+        document.getElementById('menu-form').classList.add('hidden');
+        document.getElementById('menu-reset').classList.add('hidden');
+        document.getElementById('menu-export').classList.add('hidden');
+        document.getElementById('menu-sub').textContent = 'Read-only for staff — menu editing is manager/admin only.';
+      }
       const form=document.getElementById('menu-form'), editIdEl=document.getElementById('m-edit-id'), nameEl=document.getElementById('m-name'), priceEl=document.getElementById('m-price'), catEl=document.getElementById('m-cat'), badgeEl=document.getElementById('m-badge'), descEl=document.getElementById('m-desc'), imgEl=document.getElementById('m-img'), statusEl=document.getElementById('menu-form-status');
       function render(){
         const menu=getMenu();
@@ -86,13 +93,13 @@
             <td style="font-weight:700">${formatPrice(m.price)}</td>
             <td class="small muted">${m.badge||'—'}</td>
             <td>
-              <div style="display:flex; gap:0.3rem; flex-wrap:wrap">
+              ${canEdit ? `<div style="display:flex; gap:0.3rem; flex-wrap:wrap">
                 <button data-edit="${m.id}" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Edit</button>
                 <button data-dup="${m.id}" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Dup</button>
                 <button data-up="${m.id}" ${i===0?'disabled':''} style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.4rem; border-radius:6px; cursor:pointer">↑</button>
                 <button data-down="${m.id}" ${i===menu.length-1?'disabled':''} style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.4rem; border-radius:6px; cursor:pointer">↓</button>
                 <button data-del-m="${m.id}" style="background:transparent; border:1px solid var(--border); color:#ef4444; padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Del</button>
-              </div>
+              </div>` : `<span class="small muted">read-only</span>`}
             </td>
           </tr>
         `).join('');

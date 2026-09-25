@@ -12,7 +12,7 @@
   <header class="site-header">
     <div class="container header-inner">
       <a href="index.html" class="brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">SETTINGS</span></span></a>
-      <nav class="nav"><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
+      <nav class="nav"><span id="role-badge" class="badge" style="position:static" hidden></span><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
     </div>
   </header>
   <div class="admin-layout">
@@ -22,7 +22,7 @@
         <a href="menu.html">◈ Menu</a>
         <a href="orders.html">⬡ Orders</a>
         <a href="inbox.html">✉ Inbox</a>
-        <a href="settings.html">⚙ Settings</a>
+        <a href="settings.html" data-roles="admin">⚙ Settings</a>
         <div class="nav-sep"></div>
         <a href="../index.html">← View site</a>
       </nav>
@@ -56,15 +56,79 @@
         </div>
 
         <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
-          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.6rem">Admin Access</h3>
-          <p class="small muted">Password is <code>coffin123</code> set in <code>admin/admin.js</code> <code>ADMIN_PASS</code>. Change it there and redeploy. Auth uses <code>sessionStorage bc-admin</code>.</p>
+          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.6rem">Account Access Limits</h3>
+          <table class="admin-table">
+            <thead><tr><th>Role</th><th>Status</th><th>Session limit</th><th>Set password</th><th>Actions</th></tr></thead>
+            <tbody id="accounts-tbody"></tbody>
+          </table>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.7rem">
+            <button id="clear-locks" class="btn btn-ghost small-btn">Clear all login locks</button>
+          </div>
+          <p id="accounts-status" class="form-status small"></p>
+          <p class="small muted" style="margin-top:0.4rem">Limits: 5 wrong passwords → locked 10 min (per role). Idle session timeout per role above. Defaults live in <code>DEFAULT_USERS</code> in <code>admin/admin.js</code>; changes are stored in <code>bc-admin-users</code>. Staff and manager can be disabled — they then cannot log in at all. Admin cannot be disabled.</p>
+        </div>
+
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
+          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.6rem">What each role can do</h3>
+          <table class="admin-table">
+            <thead><tr><th>Role</th><th>Access</th></tr></thead>
+            <tbody>
+              <tr><td>Staff</td><td class="small muted">Order queue + order details, update order status, read inbox, read-only menu. No revenue, no deletes, no exports, no settings.</td></tr>
+              <tr><td>Manager</td><td class="small muted">Everything staff can, plus revenue/reports, menu editing, delete orders, inbox tools, exports. No settings.</td></tr>
+              <tr><td>Admin</td><td class="small muted">Full access: this page, account management, clear all data, password resets.</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </main>
   </div>
   <script src="admin.js"></script>
   <script>
-    if(!requireAuth()) {} else {
+    if(!requireAuth('settings')) {} else {
+      const accStatus=document.getElementById('accounts-status');
+      function renderAccounts(){
+        const users=getUsers();
+        const locks=getLocks();
+        document.getElementById('accounts-tbody').innerHTML = users.map(u=>{
+          const lock = locks[u.role] && locks[u.role].until > Date.now() ? `locked ${Math.ceil((locks[u.role].until-Date.now())/60000)}m` : (locks[u.role] && locks[u.role].tries ? `${locks[u.role].tries} fails` : '—');
+          return `<tr>
+            <td><strong>${u.label}</strong><div class="small muted">${u.role}</div></td>
+            <td><span class="order-status ${u.enabled===false?'status-cancelled':'status-ready'}" style="font-size:0.7rem">${u.enabled===false?'disabled':'active'}</span><div class="small muted">${lock}</div></td>
+            <td class="small muted">${u.sessionMins} min idle</td>
+            <td><input type="password" data-pass="${u.role}" placeholder="New password" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.3rem 0.5rem; border-radius:6px; width:130px"></td>
+            <td><div style="display:flex; gap:0.3rem; flex-wrap:wrap">
+              <button data-setpass="${u.role}" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Set</button>
+              <button data-resetpass="${u.role}" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Reset</button>
+              <button data-toggle="${u.role}" ${u.role==='admin'?'disabled':''} style="background:transparent; border:1px solid var(--border); color:${u.enabled===false?'#22c55e':'#ef4444'}; padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">${u.enabled===false?'Enable':'Disable'}</button>
+            </div></td>
+          </tr>`;
+        }).join('');
+        document.querySelectorAll('[data-setpass]').forEach(b=> b.addEventListener('click', ()=>{
+          const role=b.getAttribute('data-setpass');
+          const val=document.querySelector(`[data-pass="${role}"]`).value;
+          const res=adminSetPassword(role, val);
+          accStatus.textContent=res.msg;
+          if(res.ok) document.querySelector(`[data-pass="${role}"]`).value='';
+        }));
+        document.querySelectorAll('[data-resetpass]').forEach(b=> b.addEventListener('click', ()=>{
+          const res=adminResetPassword(b.getAttribute('data-resetpass'));
+          accStatus.textContent=res.msg;
+          renderAccounts();
+        }));
+        document.querySelectorAll('[data-toggle]').forEach(b=> b.addEventListener('click', ()=>{
+          const role=b.getAttribute('data-toggle');
+          const u=getUsers().find(x=>x.role===role);
+          const res=adminSetEnabled(role, u && u.enabled===false);
+          accStatus.textContent=res.msg;
+          renderAccounts();
+        }));
+      }
+      renderAccounts();
+      document.getElementById('clear-locks').addEventListener('click', ()=>{
+        const res=adminClearLocks();
+        accStatus.textContent=res.msg;
+        renderAccounts();
+      });
       document.getElementById('export-menu').addEventListener('click', ()=>{
         const blob=new Blob([JSON.stringify(getMenu(), null, 2)], {type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='black-coffin-menu.json'; a.click(); URL.revokeObjectURL(url);
       });

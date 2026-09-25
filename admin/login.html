@@ -21,22 +21,46 @@
   <main class="container">
     <div class="login-card" style="margin-top:3rem">
       <h2 style="font-family:Cinzel">Keeper Login</h2>
-      <p class="muted small">Staff, manager &amp; admin only. Default: <code>coffin123</code> — change <code>ADMIN_PASS</code> in <code>admin/admin.js</code></p>
+      <p class="muted small">Staff, manager &amp; admin only — order details stay private.</p>
+      <select id="admin-role" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.7rem 0.9rem; border-radius:10px">
+        <option value="staff">Staff</option>
+        <option value="manager">Manager</option>
+        <option value="admin">Admin</option>
+      </select>
       <input type="password" id="admin-pass" placeholder="Password" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.7rem 0.9rem; border-radius:10px">
       <button id="login-btn" class="btn btn-primary">Enter Crypt</button>
       <p id="login-status" class="form-status"></p>
-      <p class="small muted">Static demo auth (sessionStorage). For production use real auth.</p>
+      <p class="small muted">Demo passwords: staff <code>staff123</code> • manager <code>manager123</code> • admin <code>coffin123</code>. Limits: 5 failed tries → 10 min lock. Session timeout: staff 60 min • manager 120 min • admin 240 min. Staff and manager can be disabled by the admin. Static demo auth (sessionStorage) — not real security.</p>
     </div>
   </main>
   <script src="admin.js"></script>
   <script>
-    const passEl=document.getElementById('admin-pass'), btn=document.getElementById('login-btn'), statusEl=document.getElementById('login-status');
+    const roleEl=document.getElementById('admin-role'), passEl=document.getElementById('admin-pass'), btn=document.getElementById('login-btn'), statusEl=document.getElementById('login-status');
     if(isAuthed()) location.href='index.html';
-    btn.addEventListener('click', ()=>{
-      if(passEl.value===ADMIN_PASS){ sessionStorage.setItem('bc-admin','1'); location.href='index.html'; }
-      else statusEl.textContent='Wrong password.';
-    });
-    passEl.addEventListener('keydown', e=>{ if(e.key==='Enter') btn.click(); });
+    const params = new URLSearchParams(location.search);
+    if(params.get('expired')) statusEl.textContent='Session expired after inactivity — log in again.';
+    if(params.get('locked')) statusEl.textContent='Account locked after too many failed attempts. Try again later.';
+    function lockHint(){
+      const s = lockState(roleEl.value);
+      if(s.locked){
+        const mins = Math.ceil((s.until - Date.now())/60000);
+        btn.disabled = true;
+        statusEl.textContent = `Locked — try again in ${Math.max(1,mins)} min.`;
+      } else {
+        btn.disabled = false;
+        if(!params.get('expired') && !params.get('locked')) statusEl.textContent = '';
+      }
+    }
+    function attempt(){
+      const res = login(roleEl.value, passEl.value);
+      if(res.ok) location.href='index.html';
+      else { statusEl.textContent = res.msg; lockHint(); }
+    }
+    roleEl.addEventListener('change', ()=>{ params.delete('expired'); params.delete('locked'); lockHint(); });
+    btn.addEventListener('click', attempt);
+    passEl.addEventListener('keydown', e=>{ if(e.key==='Enter') attempt(); });
+    lockHint();
+    setInterval(lockHint, 10000);
   </script>
 </body>
 </html>

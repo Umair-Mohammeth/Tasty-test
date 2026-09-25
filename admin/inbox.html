@@ -12,7 +12,7 @@
   <header class="site-header">
     <div class="container header-inner">
       <a href="index.html" class="brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">INBOX</span></span></a>
-      <nav class="nav"><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
+      <nav class="nav"><span id="role-badge" class="badge" style="position:static" hidden></span><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
     </div>
   </header>
   <div class="admin-layout">
@@ -22,14 +22,14 @@
         <a href="menu.html">◈ Menu</a>
         <a href="orders.html">⬡ Orders</a>
         <a href="inbox.html">✉ Inbox</a>
-        <a href="settings.html">⚙ Settings</a>
+        <a href="settings.html" data-roles="admin">⚙ Settings</a>
         <div class="nav-sep"></div>
         <a href="../index.html">← View site</a>
       </nav>
     </aside>
     <main class="admin-main">
       <h1 class="admin-page-title">Inbox</h1>
-      <p class="admin-page-sub">Messages from contact form + newsletter signups.</p>
+      <p class="admin-page-sub" id="inbox-sub">Messages from contact form + newsletter signups.</p>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem">
         <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
           <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.6rem">Messages (<span id="msg-count">0</span>) <button id="clear-msg" class="btn btn-ghost" style="float:right; padding:0.2rem 0.6rem; font-size:0.7rem">Clear</button></h3>
@@ -45,14 +45,21 @@
   </div>
   <script src="admin.js"></script>
   <script>
-    if(!requireAuth()) {} else {
+    if(!requireAuth('inbox.view')) {} else {
+      const canManage = can('inbox.manage');
+      if(!canManage){
+        document.getElementById('clear-msg').classList.add('hidden');
+        document.getElementById('clear-nl').classList.add('hidden');
+        document.getElementById('export-nl').classList.add('hidden');
+        document.getElementById('inbox-sub').textContent = 'Read-only for staff — deleting or exporting inbox data is manager/admin only.';
+      }
       function render(){
         const msgs=JSON.parse(localStorage.getItem('bc-messages')||'[]');
         const nl=JSON.parse(localStorage.getItem('bc-newsletter')||'[]');
         document.getElementById('msg-count').textContent=msgs.length;
         document.getElementById('nl-count').textContent=nl.length;
-        document.getElementById('messages-list').innerHTML = msgs.length? msgs.map((m,i)=>`<div style="background:var(--bg-soft); border:1px solid var(--border); border-radius:8px; padding:0.7rem"><div style="display:flex; justify-content:space-between; gap:0.5rem"><strong style="font-size:0.85rem">${m.name} — ${m.email}</strong><button data-del-msg="${i}" style="background:transparent; border:none; color:#ef4444; cursor:pointer; font-size:0.75rem">✕</button></div><div class="small muted">${m.subject||''} • ${formatSLDateTime(m.date)}</div><div style="font-size:0.85rem; margin-top:0.4rem">${m.msg}</div></div>`).join('') : '<p class="small muted">No messages.</p>';
-        document.getElementById('newsletter-list').innerHTML = nl.length? nl.map((e,i)=>`<div style="display:flex; justify-content:space-between; gap:0.5rem; background:var(--bg-soft); border:1px solid var(--border); padding:0.5rem 0.7rem; border-radius:8px"><span>• ${e}</span><button data-del-nl="${i}" style="background:transparent; border:none; color:#ef4444; cursor:pointer">✕</button></div>`).join('') : 'No subscribers yet.';
+        document.getElementById('messages-list').innerHTML = msgs.length? msgs.map((m,i)=>`<div style="background:var(--bg-soft); border:1px solid var(--border); border-radius:8px; padding:0.7rem"><div style="display:flex; justify-content:space-between; gap:0.5rem"><strong style="font-size:0.85rem">${m.name} — ${m.email}</strong>${canManage ? `<button data-del-msg="${i}" style="background:transparent; border:none; color:#ef4444; cursor:pointer; font-size:0.75rem">✕</button>` : ''}</div><div class="small muted">${m.subject||''} • ${formatSLDateTime(m.date)}</div><div style="font-size:0.85rem; margin-top:0.4rem">${m.msg}</div></div>`).join('') : '<p class="small muted">No messages.</p>';
+        document.getElementById('newsletter-list').innerHTML = nl.length? nl.map((e,i)=>`<div style="display:flex; justify-content:space-between; gap:0.5rem; background:var(--bg-soft); border:1px solid var(--border); padding:0.5rem 0.7rem; border-radius:8px"><span>• ${e}</span>${canManage ? `<button data-del-nl="${i}" style="background:transparent; border:none; color:#ef4444; cursor:pointer">✕</button>` : ''}</div>`).join('') : 'No subscribers yet.';
         document.querySelectorAll('[data-del-msg]').forEach(b=> b.addEventListener('click', ()=>{ const idx=parseInt(b.getAttribute('data-del-msg')); const a=JSON.parse(localStorage.getItem('bc-messages')||'[]'); a.splice(idx,1); localStorage.setItem('bc-messages', JSON.stringify(a)); render(); }));
         document.querySelectorAll('[data-del-nl]').forEach(b=> b.addEventListener('click', ()=>{ const idx=parseInt(b.getAttribute('data-del-nl')); const a=JSON.parse(localStorage.getItem('bc-newsletter')||'[]'); a.splice(idx,1); localStorage.setItem('bc-newsletter', JSON.stringify(a)); render(); }));
       }
