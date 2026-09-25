@@ -1,14 +1,19 @@
 // Black Coffin Service Worker — static cache only
-const CACHE = 'black-coffin-v1';
+const CACHE = 'black-coffin-v2';
 const ASSETS = [
   './index.html',
   './pages/menu.html',
   './pages/story.html',
   './pages/visit.html',
+  './pages/track.html',
   './admin/index.html',
-  './admin/menu.html',
+  './admin/board.html',
   './admin/orders.html',
+  './admin/menu.html',
   './admin/inbox.html',
+  './admin/reservations.html',
+  './admin/coupons.html',
+  './admin/reports.html',
   './admin/settings.html',
   './admin/login.html',
   './assets/css/style.css',

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Black Coffin — Track Your Order</title>
+  <meta name="description" content="Check the status of your Black Coffin order with your order ID and phone number.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" href="data:,">
+  <meta name="color-scheme" content="dark">
+  <script src="../assets/js/script.js" defer></script>
+</head>
+<body class="site-font">
+  <div class="top-bar">
+    <div class="container top-bar-inner">
+      <span>◼ Open daily 07:00 — 23:00 • <span id="sl-clock">Sri Lanka time</span></span>
+      <span class="top-bar-right">📍 13 Raven Alley, Colombo 03 • ☎ +94 11 234 5678</span>
+    </div>
+  </div>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="../index.html" class="brand" aria-label="Black Coffin home">
+        <span class="brand-mark">†</span>
+        <span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">COFFEE & SHADOWS</span></span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a href="../index.html" class="nav-link">Home</a>
+        <a href="menu.html" class="nav-link">Menu</a>
+        <a href="story.html" class="nav-link">Story</a>
+        <a href="visit.html" class="nav-link">Visit</a>
+        <a href="track.html" class="nav-link" style="color:var(--text)">Track</a>
+        <button id="cart-btn" class="btn btn-cart" aria-label="Open cart">◈ Cart <span id="cart-count" class="cart-count">0</span></button>
+        <button id="mobile-toggle" class="mobile-toggle" aria-label="Toggle menu">☰</button>
+      </nav>
+    </div>
+    <div id="mobile-nav" class="mobile-nav"><a href="../index.html">Home</a><a href="menu.html">Menu</a><a href="story.html">Story</a><a href="visit.html">Visit</a><a href="track.html">Track</a></div>
+  </header>
+
+  <main class="container section">
+    <div class="section-head">
+      <p class="eyebrow">ORDER STATUS</p>
+      <h2>Track Your Order</h2>
+      <p class="muted">Enter your order ID and the last 4 digits of the phone number you used. We only show status and items — full order details stay with our staff.</p>
+    </div>
+
+    <form id="track-form" style="display:flex; gap:0.5rem; flex-wrap:wrap; max-width:520px; margin-bottom:1rem">
+      <input id="track-id" placeholder="Order ID — BC-123456" required style="flex:1; min-width:200px; background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.65rem 0.9rem; border-radius:10px">
+      <input id="track-phone" placeholder="Last 4 of phone" required inputmode="numeric" maxlength="4" style="width:150px; background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.65rem 0.9rem; border-radius:10px">
+      <button type="submit" class="btn btn-primary">Check status</button>
+    </form>
+    <p id="track-status" class="form-status" role="status"></p>
+
+    <div id="track-result" class="track-result hidden"></div>
+
+    <p class="small muted" style="margin-top:1.2rem">Lost your order ID? Call us on <a href="tel:+94112345678" style="color:var(--accent-light)">+94 11 234 5678</a> or show your phone at the counter — we can look it up.</p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div><div class="brand footer-brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">EST. 2019</span></span></div><p class="small">© <span id="year"></span> Black Coffin</p></div>
+      <div><h4>Explore</h4><a href="../index.html">Home</a><a href="menu.html">Menu</a><a href="story.html">Story</a><a href="visit.html">Visit</a><a href="track.html">Track order</a></div>
+      <div><h4>Contact</h4><a href="tel:+94112345678">+94 11 234 5678</a><a href="mailto:hello@blackcoffin.coffee">hello@blackcoffin.coffee</a></div>
+    </div>
+  </footer>
+
+  <!-- Shared cart/modal/toast -->
+  <div id="cart-overlay" class="cart-overlay hidden" aria-hidden="true"></div>
+  <aside id="cart-drawer" class="cart-drawer" aria-label="Shopping cart" aria-hidden="true">
+    <div class="cart-head"><h3>Your Coffin <span id="cart-count-drawer" class="muted"></span></h3><button id="cart-close" class="icon-btn" aria-label="Close cart">✕</button></div>
+    <div id="cart-items" class="cart-items"><p class="empty-cart">Your coffin is empty.</p></div>
+    <div class="cart-foot">
+      <div class="cart-totals"><div><span>Subtotal</span><span id="cart-subtotal">Rs 0</span></div><div class="hidden" id="cart-discount-row"><span>Promo</span><span id="cart-discount">-Rs 0</span></div><div><span>Delivery</span><span id="cart-delivery">Pickup — free</span></div><div class="total"><span>Total</span><span id="cart-total">Rs 0</span></div></div>
+      <div class="cart-options"><label><input type="radio" name="order-type" value="pickup" checked> Pickup (15 min)</label><label><input type="radio" name="order-type" value="delivery"> Delivery (zone rates)</label></div>
+      <div class="cart-promo"><input id="cart-promo-code" type="text" placeholder="Promo code" aria-label="Promo code"><button id="cart-promo-apply" class="btn btn-ghost small-btn" type="button">Apply</button></div>
+      <p id="cart-promo-status" class="form-status small"></p>
+      <p id="cart-free-hint" class="small muted hidden"></p>
+      <p id="cart-zone-hint" class="small muted hidden"></p>
+      <button id="checkout-btn" class="btn btn-primary full">Checkout • <span id="checkout-total">Rs 0</span></button>
+    </div>
+  </aside>
+  <dialog id="checkout-modal" class="modal large">
+    <form method="dialog" class="modal-inner" id="checkout-form">
+      <h3>Almost there ♰</h3>
+      <p class="muted small">Pickup in 15 min • Delivery 35-50 min</p>
+      <div id="checkout-summary" class="checkout-summary"></div>
+      <div class="form-row"><input type="text" id="checkout-name" placeholder="Full name *" required><input type="tel" id="checkout-phone" placeholder="Phone * — 077 123 4567" required></div>
+      <input type="email" id="checkout-email" placeholder="Email for receipt *" required>
+      <input type="text" id="checkout-address" placeholder="Delivery address in Colombo — required if delivery" class="hidden" aria-label="Delivery address">
+      <textarea id="checkout-notes" rows="2" placeholder="Notes — e.g. 'extra hot'"></textarea>
+      <div id="zone-wrap" class="hidden form-group" style="margin-top:0.6rem">
+        <label class="small muted" for="delivery-zone">Delivery zone (Colombo)</label>
+        <select id="delivery-zone" style="width:100%; background:var(--bg-soft); color:var(--text); border:1px solid var(--border); padding:0.55rem 0.7rem; border-radius:8px">
+          <option value="">Choose your zone</option>
+        </select>
+        <p id="zone-hint" class="small muted" style="margin-top:0.3rem"></p>
+      </div>
+      <div class="cart-promo" style="margin-top:0.6rem">
+        <input id="promo-code" type="text" placeholder="Promo code (optional)" aria-label="Promo code">
+        <button id="promo-apply" class="btn btn-ghost small-btn" type="button">Apply</button>
+      </div>
+      <p id="promo-status" class="form-status small"></p>
+      <div id="loyalty-box" class="hidden small" style="background:var(--accent-ghost); border:1px solid rgba(217,119,6,0.25); padding:0.6rem 0.8rem; border-radius:8px; margin-top:0.5rem">
+        <p id="loyalty-info" style="margin:0"></p>
+        <label class="hidden" style="display:flex; align-items:center; gap:0.4rem; margin-top:0.4rem; cursor:pointer"><input type="checkbox" id="loyalty-redeem" style="width:auto"> Redeem points at checkout</label>
+      </div>
+      <div class="pay-methods">
+        <p class="eyebrow" style="font-size:0.65rem; margin-bottom:0.4rem">PAYMENT METHOD</p>
+        <label class="pay-option"><input type="radio" name="pay-method" value="pickup" checked> <span>Pay on pickup / cash on delivery</span></label>
+        <label class="pay-option"><input type="radio" name="pay-method" value="card-mock"> <span>Pay with card (mock)</span> <span class="badge" style="position:static; font-size:0.6rem">TEST</span></label>
+        <label class="pay-option"><input type="radio" name="pay-method" value="stripe"> <span>Pay with Stripe</span> <span class="muted small">— mock</span></label>
+      </div>
+      <div id="mock-card-fields" class="hidden" style="display:grid; gap:0.5rem; background:var(--bg-soft); padding:0.8rem; border-radius:10px; border:1px solid var(--border)">
+        <p class="small muted">Mock card — use <code>4242 4242 4242 4242</code></p>
+        <input type="text" id="mock-card-number" placeholder="Card number — 4242 4242 4242 4242" maxlength="19" inputmode="numeric">
+        <div class="form-row"><input type="text" id="mock-exp" placeholder="MM/YY" maxlength="5"><input type="text" id="mock-cvc" placeholder="CVC" maxlength="4" inputmode="numeric"></div>
+      </div>
+      <div id="stripe-info" class="hidden small muted" style="background:var(--accent-ghost); padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(217,119,6,0.25)">Static mock — no backend.</div>
+      <div class="modal-actions"><button type="button" id="modal-cancel" class="btn btn-ghost">Cancel</button><button type="submit" id="place-order" class="btn btn-primary">Place Order • <span id="modal-total">Rs 0</span></button></div>
+      <p id="checkout-status" class="form-status"></p>
+    </form>
+  </dialog>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script>
+    (function(){
+      const ORDERS_KEY = 'bc-orders';
+      const SL_TZ = 'Asia/Colombo';
+      const lkrFmt = new Intl.NumberFormat('en-LK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      const money = n => 'Rs ' + lkrFmt.format(Number(n) || 0);
+      const when = iso => {
+        const d = new Date(iso);
+        if(isNaN(d.getTime())) return '';
+        return new Intl.DateTimeFormat('en-LK', { timeZone: SL_TZ, day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:true }).format(d) + ' SLST';
+      };
+      const esc = s => String(s === undefined || s === null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      const STEPS = ['pending','preparing','ready','delivered'];
+      const LABEL = { pending:'Order received', preparing:'Being prepared', ready:'Ready for pickup', delivered:'Completed' };
+
+      const form = document.getElementById('track-form');
+      const statusEl = document.getElementById('track-status');
+      const resultEl = document.getElementById('track-result');
+
+      form.addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const id = document.getElementById('track-id').value.trim().toUpperCase();
+        const last4 = document.getElementById('track-phone').value.trim();
+        if(!id || last4.length !== 4){ statusEl.textContent='Enter your order ID and the last 4 digits of your phone.'; resultEl.classList.add('hidden'); return; }
+        let orders = [];
+        try{ orders = JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]'); }catch(err){ orders = []; }
+        const order = orders.find(o => String(o.id || '').toUpperCase() === id);
+        const phoneDigits = order ? String(order.customer.phone || '').replace(/\D/g,'') : '';
+        if(!order || !phoneDigits.endsWith(last4)){
+          statusEl.textContent='No order matches that ID and phone number. Check both and try again.';
+          resultEl.classList.add('hidden');
+          return;
+        }
+        statusEl.textContent='';
+        const idx = STEPS.indexOf(order.status);
+        const steps = STEPS.map((s,i)=>{
+          const cls = i < idx ? 'done' : (i === idx ? 'current' : '');
+          return `<div class="track-step ${cls}"><span class="dot"></span><span>${LABEL[s]}</span></div>`;
+        }).join('');
+        const items = (order.items||[]).map(i=>`<div style="display:flex; justify-content:space-between; gap:1rem; font-size:0.85rem"><span>${esc(i.name)} × ${i.qty}</span><span>${money(Number(i.price)*Number(i.qty))}</span></div>`).join('');
+        const type = order.orderType === 'delivery' ? 'Delivery' : 'Pickup';
+        resultEl.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap">
+            <div><span class="order-id" style="font-family:'Cinzel',serif; font-weight:700">${esc(order.id)}</span>
+            <div class="small muted">Placed ${when(order.date)}</div></div>
+            <span class="order-status status-${esc(order.status)}">${esc(order.status)}</span>
+          </div>
+          <div class="track-steps">${steps}</div>
+          <hr style="border:none; border-top:1px dashed var(--border); margin:0.9rem 0">
+          ${items}
+          <div style="display:flex; justify-content:space-between; font-weight:700; font-size:0.9rem; margin-top:0.4rem"><span>Total • ${esc(type)}</span><span>${money(order.total)}</span></div>
+          <p class="small muted" style="margin-top:0.8rem">Something wrong? Call <a href="tel:+94112345678" style="color:var(--accent-light)">+94 11 234 5678</a> with your order ID.</p>`;
+        resultEl.classList.remove('hidden');
+      });
+    })();
+  </script>
+</body>
+</html>

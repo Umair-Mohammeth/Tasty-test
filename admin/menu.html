@@ -19,9 +19,13 @@
     <aside class="admin-sidebar">
       <nav class="admin-nav">
         <a href="index.html">◧ Dashboard</a>
-        <a href="menu.html">◈ Menu</a>
+        <a href="board.html">🧾 Board</a>
         <a href="orders.html">⬡ Orders</a>
+        <a href="menu.html">◈ Menu</a>
         <a href="inbox.html">✉ Inbox</a>
+        <a href="reservations.html">🪑 Reservations</a>
+        <a href="coupons.html" data-roles="manager,admin">% Coupons</a>
+        <a href="reports.html" data-roles="manager,admin">▤ Reports</a>
         <a href="settings.html" data-roles="admin">⚙ Settings</a>
         <div class="nav-sep"></div>
         <a href="../index.html">← View site</a>
@@ -46,10 +50,12 @@
             <option value="espresso">espresso</option><option value="brew">brew</option><option value="cold">cold</option><option value="pastry">pastry</option>
           </select>
         </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.6rem">
+          <input id="m-stock" type="number" step="1" min="0" placeholder="Stock — blank = unlimited" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+          <label class="small" style="display:flex; align-items:center; gap:0.4rem; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px; cursor:pointer"><input type="checkbox" id="m-soldout" style="width:auto"> Sold out</label>
           <input id="m-badge" placeholder="Badge — House / Vegan" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
-          <input id="m-img" placeholder="Image URL — https://..." style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
         </div>
+        <input id="m-img" placeholder="Image URL — https://..." style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
         <textarea id="m-desc" rows="2" placeholder="Description * — Double shot, dark chocolate..." required style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px; resize:vertical"></textarea>
         <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
           <button type="submit" id="menu-save" class="btn btn-primary">Add item</button>
@@ -60,7 +66,7 @@
 
       <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem; overflow:auto">
         <table class="admin-table" id="menu-table">
-          <thead><tr><th>#</th><th>Image</th><th>Name / ID</th><th>Cat</th><th>Price (LKR)</th><th>Badge</th><th style="min-width:260px">Actions</th></tr></thead>
+          <thead><tr><th>#</th><th>Image</th><th>Name / ID</th><th>Cat</th><th>Price (LKR)</th><th>Stock</th><th>Badge</th><th style="min-width:260px">Actions</th></tr></thead>
           <tbody id="menu-tbody"></tbody>
         </table>
         <p id="menu-empty" class="muted small center hidden" style="padding:0.8rem">No items.</p>
@@ -88,17 +94,19 @@
           <tr>
             <td>${i+1}</td>
             <td><img src="${m.img}" alt="" style="width:44px; height:44px; object-fit:cover; border-radius:6px; border:1px solid var(--border)"></td>
-            <td><div style="font-weight:600">${m.name}</div><div class="small muted" style="font-family:monospace">${m.id}</div><div class="small muted" style="max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${m.desc}</div></td>
+            <td><div style="font-weight:600">${escapeHtml(m.name)}</div><div class="small muted" style="font-family:monospace">${escapeHtml(m.id)}</div><div class="small muted" style="max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${escapeHtml(m.desc)}</div></td>
             <td><span class="small" style="background:var(--bg-soft); border:1px solid var(--border); padding:0.15rem 0.4rem; border-radius:999px">${m.cat}</span></td>
             <td style="font-weight:700">${formatPrice(m.price)}</td>
-            <td class="small muted">${m.badge||'—'}</td>
+            <td>${m.soldOut ? `<span class="order-status status-cancelled" style="font-size:0.65rem">sold out</span>` : (m.stock === 0 ? `<span class="order-status status-cancelled" style="font-size:0.65rem">0 left</span>` : (m.stock > 0 ? `<span class="order-status ${m.stock<=5?'status-pending':'status-ready'}" style="font-size:0.65rem">${m.stock}</span>` : `<span class="small muted">∞</span>`))}</td>
+            <td class="small muted">${escapeHtml(m.badge||'—')}</td>
             <td>
               ${canEdit ? `<div style="display:flex; gap:0.3rem; flex-wrap:wrap">
-                <button data-edit="${m.id}" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Edit</button>
-                <button data-dup="${m.id}" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Dup</button>
-                <button data-up="${m.id}" ${i===0?'disabled':''} style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.4rem; border-radius:6px; cursor:pointer">↑</button>
-                <button data-down="${m.id}" ${i===menu.length-1?'disabled':''} style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.4rem; border-radius:6px; cursor:pointer">↓</button>
-                <button data-del-m="${m.id}" style="background:transparent; border:1px solid var(--border); color:#ef4444; padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Del</button>
+                <button data-edit="${escapeHtml(m.id)}" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Edit</button>
+                <button data-dup="${escapeHtml(m.id)}" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Dup</button>
+                <button data-up="${escapeHtml(m.id)}" ${i===0?'disabled':''} style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.4rem; border-radius:6px; cursor:pointer">↑</button>
+                <button data-down="${escapeHtml(m.id)}" ${i===menu.length-1?'disabled':''} style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.4rem; border-radius:6px; cursor:pointer">↓</button>
+                <button data-soldout="${escapeHtml(m.id)}" style="background:transparent; border:1px solid ${m.soldOut?'#22c55e':'var(--border)'}; color:${m.soldOut?'#22c55e':'#ef4444'}; padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">${m.soldOut?'Restock':'Sell out'}</button>
+                <button data-del-m="${escapeHtml(m.id)}" style="background:transparent; border:1px solid var(--border); color:#ef4444; padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Del</button>
               </div>` : `<span class="small muted">read-only</span>`}
             </td>
           </tr>
@@ -111,10 +119,17 @@
         tbody.querySelectorAll('[data-up]').forEach(b=> b.addEventListener('click', ()=>{ const id=b.getAttribute('data-up'); const menu=getMenu(); const idx=menu.findIndex(x=>x.id===id); if(idx>0){ const tmp=menu[idx-1]; menu[idx-1]=menu[idx]; menu[idx]=tmp; saveMenu(menu); render(); } }));
         tbody.querySelectorAll('[data-down]').forEach(b=> b.addEventListener('click', ()=>{ const id=b.getAttribute('data-down'); const menu=getMenu(); const idx=menu.findIndex(x=>x.id===id); if(idx<menu.length-1){ const tmp=menu[idx+1]; menu[idx+1]=menu[idx]; menu[idx]=tmp; saveMenu(menu); render(); } }));
         tbody.querySelectorAll('[data-del-m]').forEach(b=> b.addEventListener('click', ()=>{ const id=b.getAttribute('data-del-m'); if(confirm(`Delete "${id}"?`)){ saveMenu(getMenu().filter(x=>x.id!==id)); render(); } }));
+        tbody.querySelectorAll('[data-soldout]').forEach(b=> b.addEventListener('click', ()=>{
+          const id=b.getAttribute('data-soldout'); const menu=getMenu(); const m=menu.find(x=>x.id===id); if(!m) return;
+          if(m.soldOut){ m.soldOut=false; if(m.stock===0) m.stock=12; } else { m.soldOut=true; }
+          saveMenu(menu); render();
+        }));
       }
       function startEdit(id){
         const m=getMenu().find(x=>x.id===id); if(!m) return;
         editIdEl.value=m.id; nameEl.value=m.name; priceEl.value=m.price; catEl.value=m.cat; badgeEl.value=m.badge||''; descEl.value=m.desc; imgEl.value=m.img||'';
+        document.getElementById('m-stock').value = (m.stock === undefined || m.stock === null) ? '' : m.stock;
+        document.getElementById('m-soldout').checked = !!m.soldOut;
         document.getElementById('menu-save').textContent='Save changes'; document.getElementById('menu-cancel').classList.remove('hidden'); statusEl.textContent=`Editing ${id}`;
         form.scrollIntoView({behavior:'smooth', block:'center'});
       }
@@ -122,14 +137,17 @@
       form.addEventListener('submit', (e)=>{
         e.preventDefault();
         const name=nameEl.value.trim(), price=parseFloat(priceEl.value), cat=catEl.value, badge=badgeEl.value.trim(), desc=descEl.value.trim(), img=imgEl.value.trim() || 'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=600&q=80';
+        const stockRaw=document.getElementById('m-stock').value.trim();
+        const stock = stockRaw==='' ? null : Math.max(0, parseInt(stockRaw,10) || 0);
+        const soldOut = document.getElementById('m-soldout').checked;
         if(!name||!desc||isNaN(price)){ statusEl.textContent='Name, price, description required.'; return; }
         const menu=getMenu(); const editingId=editIdEl.value.trim();
         if(editingId){
           const idx=menu.findIndex(x=>x.id===editingId); if(idx===-1){ statusEl.textContent='Not found.'; return; }
           let newId=slugify(name); if(newId!==editingId && menu.some(x=>x.id===newId)){ statusEl.textContent='Name/id collision.'; return; }
-          menu[idx]={id:newId,name,price,cat,badge,desc,img}; saveMenu(menu); render(); editIdEl.value=''; form.reset(); document.getElementById('menu-save').textContent='Add item'; document.getElementById('menu-cancel').classList.add('hidden'); statusEl.textContent=`Updated "${name}"`;
+          menu[idx]={...menu[idx], id:newId,name,price,cat,badge,desc,img,stock,soldOut}; saveMenu(menu); render(); editIdEl.value=''; form.reset(); document.getElementById('menu-save').textContent='Add item'; document.getElementById('menu-cancel').classList.add('hidden'); statusEl.textContent=`Updated "${name}"`;
         } else {
-          let id=slugify(name); let base=id, n=1; while(menu.some(x=>x.id===id)) id=base+'-'+n++; menu.push({id,name,price,cat,badge,desc,img}); saveMenu(menu); render(); form.reset(); statusEl.textContent=`Added "${name}"`;
+          let id=slugify(name); let base=id, n=1; while(menu.some(x=>x.id===id)) id=base+'-'+n++; menu.push({id,name,price,cat,badge,desc,img,stock,soldOut}); saveMenu(menu); render(); form.reset(); statusEl.textContent=`Added "${name}"`;
         }
       });
       document.getElementById('menu-reset').addEventListener('click', ()=>{ if(confirm('Reset to default 12 items?')){ localStorage.removeItem(MENU_KEY); render(); statusEl.textContent='Reset.'; } });

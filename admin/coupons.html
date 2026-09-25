@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Black Coffin — Promo Codes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <meta name="color-scheme" content="dark">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">PROMO CODES</span></span></a>
+      <nav class="nav"><span id="sl-clock" class="small muted">Sri Lanka time</span><span id="role-badge" class="badge" style="position:static" hidden></span><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
+    </div>
+  </header>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="index.html">◧ Dashboard</a>
+        <a href="board.html">🧾 Board</a>
+        <a href="orders.html">⬡ Orders</a>
+        <a href="menu.html">◈ Menu</a>
+        <a href="inbox.html">✉ Inbox</a>
+        <a href="reservations.html">🪑 Reservations</a>
+        <a href="coupons.html" data-roles="manager,admin">% Coupons</a>
+        <a href="reports.html" data-roles="manager,admin">▤ Reports</a>
+        <a href="settings.html" data-roles="admin">⚙ Settings</a>
+        <div class="nav-sep"></div>
+        <a href="../index.html">← View site</a>
+      </nav>
+    </aside>
+    <main class="admin-main">
+      <h1 class="admin-page-title">Promo Codes</h1>
+      <p class="admin-page-sub">Discount codes customers enter in the cart or at checkout. Stored in <code>bc-coupons</code>.</p>
+
+      <form id="coupon-form" style="display:grid; gap:0.6rem; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:0.9rem; margin-bottom:1rem">
+        <input type="hidden" id="c-orig">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.6rem">
+          <input id="c-code" placeholder="Code * — NIGHT20" required style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px; text-transform:uppercase">
+          <select id="c-type" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+            <option value="percent">Percent off (%)</option>
+            <option value="fixed">Fixed amount (Rs)</option>
+          </select>
+          <input id="c-value" type="number" min="0" step="1" placeholder="Value * — 20" required style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:0.6rem">
+          <input id="c-min" type="number" min="0" step="1" placeholder="Min spend (Rs) — 1000" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+          <input id="c-maxdisc" type="number" min="0" step="1" placeholder="Max discount (Rs)" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+          <input id="c-maxuses" type="number" min="0" step="1" placeholder="Max uses — 100" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+          <input id="c-expires" type="date" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+        </div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center">
+          <button type="submit" id="c-save" class="btn btn-primary">Create code</button>
+          <button type="button" id="c-cancel" class="btn btn-ghost hidden">Cancel edit</button>
+          <span id="c-status" class="small muted" style="align-self:center"></span>
+        </div>
+      </form>
+
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem; overflow:auto">
+        <table class="admin-table">
+          <thead><tr><th>Code</th><th>Discount</th><th>Conditions</th><th>Used</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="coupon-tbody"></tbody>
+        </table>
+        <p id="coupon-empty" class="muted small center hidden" style="padding:0.8rem">No promo codes yet.</p>
+      </div>
+    </main>
+  </div>
+  <script src="admin.js"></script>
+  <script>
+    if(!requireAuth('coupons.manage')) {} else {
+      const codeEl=document.getElementById('c-code'), typeEl=document.getElementById('c-type'), valueEl=document.getElementById('c-value'), minEl=document.getElementById('c-min'), maxdiscEl=document.getElementById('c-maxdisc'), maxusesEl=document.getElementById('c-maxuses'), expiresEl=document.getElementById('c-expires'), origEl=document.getElementById('c-orig'), statusEl=document.getElementById('c-status');
+
+      function render(){
+        const list = getCoupons();
+        const tbody = document.getElementById('coupon-tbody'), empty = document.getElementById('coupon-empty');
+        if(!list.length){ tbody.innerHTML=''; empty.classList.remove('hidden'); return; }
+        empty.classList.add('hidden');
+        tbody.innerHTML = list.map(c=>{
+          const expired = c.expires && new Date(c.expires) < new Date();
+          const usedUp = c.maxUses && (c.used||0) >= c.maxUses;
+          const state = c.active === false ? 'inactive' : expired ? 'expired' : usedUp ? 'used up' : 'active';
+          const cls = state === 'active' ? 'status-ready' : state === 'expired' ? 'status-cancelled' : 'status-pending';
+          const discount = c.type === 'percent' ? `${c.value}%` : formatPrice(c.value);
+          return `<tr>
+            <td><strong style="font-family:Cinzel">${escapeHtml(c.code)}</strong></td>
+            <td>${escapeHtml(discount)}</td>
+            <td class="small muted">${c.minSpend ? 'min ' + formatPrice(c.minSpend) : 'no min'}${c.maxDiscount ? ' • cap ' + formatPrice(c.maxDiscount) : ''}${c.expires ? ' • till ' + escapeHtml(c.expires) : ''}</td>
+            <td>${c.used||0}${c.maxUses ? ' / ' + c.maxUses : ''}</td>
+            <td><span class="order-status ${cls}" style="font-size:0.65rem">${state}</span></td>
+            <td><div style="display:flex; gap:0.3rem; flex-wrap:wrap">
+              <button data-edit="${escapeHtml(c.code)}" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Edit</button>
+              <button data-toggle="${escapeHtml(c.code)}" style="background:transparent; border:1px solid var(--border); color:${c.active===false?'#22c55e':'#ef4444'}; padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">${c.active===false?'Activate':'Deactivate'}</button>
+              <button data-del="${escapeHtml(c.code)}" style="background:transparent; border:1px solid var(--border); color:#ef4444; padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Del</button>
+            </div></td>
+          </tr>`;
+        }).join('');
+        tbody.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click', ()=> startEdit(b.getAttribute('data-edit'))));
+        tbody.querySelectorAll('[data-toggle]').forEach(b=> b.addEventListener('click', ()=>{
+          const list2 = getCoupons(); const c = list2.find(x=>x.code === b.getAttribute('data-toggle'));
+          if(c){ c.active = c.active === false; saveCoupons(list2); statusEl.textContent = `${c.code} ${c.active ? 'activated' : 'deactivated'}`; render(); }
+        }));
+        tbody.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', ()=>{
+          const code = b.getAttribute('data-del');
+          if(confirm('Delete code "' + code + '"?')){ saveCoupons(getCoupons().filter(x=>x.code !== code)); statusEl.textContent = 'Deleted ' + code; render(); }
+        }));
+      }
+
+      function startEdit(code){
+        const c = getCoupons().find(x=>x.code === code); if(!c) return;
+        origEl.value = c.code;
+        codeEl.value = c.code; typeEl.value = c.type || 'percent'; valueEl.value = c.value;
+        minEl.value = c.minSpend || ''; maxdiscEl.value = c.maxDiscount || ''; maxusesEl.value = c.maxUses || '';
+        expiresEl.value = c.expires || '';
+        document.getElementById('c-save').textContent = 'Save changes';
+        document.getElementById('c-cancel').classList.remove('hidden');
+        statusEl.textContent = 'Editing ' + c.code;
+        document.getElementById('coupon-form').scrollIntoView({behavior:'smooth', block:'center'});
+      }
+
+      document.getElementById('c-cancel').addEventListener('click', ()=>{
+        origEl.value=''; document.getElementById('coupon-form').reset();
+        document.getElementById('c-save').textContent='Create code';
+        document.getElementById('c-cancel').classList.add('hidden');
+        statusEl.textContent='';
+      });
+
+      document.getElementById('coupon-form').addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const code = codeEl.value.trim().toUpperCase();
+        const type = typeEl.value;
+        const value = parseFloat(valueEl.value);
+        if(!code || isNaN(value)){ statusEl.textContent = 'Code and value are required.'; return; }
+        if(type === 'percent' && (value <= 0 || value > 100)){ statusEl.textContent = 'Percent must be 1–100.'; return; }
+        const list = getCoupons();
+        const orig = origEl.value.trim().toUpperCase();
+        const existingIdx = orig ? list.findIndex(x=>x.code === orig) : list.findIndex(x=>x.code === code);
+        const record = {
+          code,
+          type,
+          value,
+          minSpend: parseInt(minEl.value,10) || 0,
+          maxDiscount: parseInt(maxdiscEl.value,10) || 0,
+          maxUses: parseInt(maxusesEl.value,10) || 0,
+          expires: expiresEl.value || '',
+          used: existingIdx >= 0 ? (list[existingIdx].used || 0) : 0,
+          active: existingIdx >= 0 ? list[existingIdx].active !== false : true
+        };
+        if(existingIdx >= 0){ list[existingIdx] = record; statusEl.textContent = 'Updated ' + code; }
+        else { list.push(record); statusEl.textContent = 'Created ' + code; }
+        saveCoupons(list);
+        origEl.value=''; document.getElementById('coupon-form').reset();
+        document.getElementById('c-save').textContent='Create code';
+        document.getElementById('c-cancel').classList.add('hidden');
+        render();
+      });
+
+      render();
+    }
+  </script>
+</body>
+</html>

@@ -40,8 +40,9 @@
         <a href="index.html" class="nav-link" style="color:var(--text)">Home</a>
         <a href="pages/menu.html" class="nav-link">Menu</a>
         <a href="pages/story.html" class="nav-link">Story</a>
-        <a href="pages/visit.html" class="nav-link">Visit</a>
-        <a href="admin/index.html" class="nav-link" style="opacity:0.6">Admin</a>
+      <a href="pages/visit.html" class="nav-link">Visit</a>
+      <a href="pages/track.html" class="nav-link">Track</a>
+      <a href="admin/index.html" class="nav-link" style="opacity:0.6">Admin</a>
         <button id="cart-btn" class="btn btn-cart" aria-label="Open cart">
           <span class="cart-icon">◈</span> Cart <span id="cart-count" class="cart-count">0</span>
         </button>
@@ -152,7 +153,8 @@
         <a href="index.html">Home</a>
         <a href="pages/menu.html">Menu</a>
         <a href="pages/story.html">Story</a>
-        <a href="pages/visit.html">Visit</a>
+      <a href="pages/visit.html">Visit</a>
+      <a href="pages/track.html">Track order</a>
       </div>
       <div>
         <h4>Follow the smoke</h4>
@@ -185,14 +187,14 @@
     <div class="cart-foot">
       <div class="cart-totals">
         <div><span>Subtotal</span><span id="cart-subtotal">Rs 0</span></div>
-        <div><span>Delivery</span><span id="cart-delivery">Pickup — free</span></div>
+        <div class="hidden" id="cart-discount-row"><span>Promo</span><span id="cart-discount">-Rs 0</span></div><div><span>Delivery</span><span id="cart-delivery">Pickup — free</span></div>
         <div class="total"><span>Total</span><span id="cart-total">Rs 0</span></div>
       </div>
       <div class="cart-options">
         <label><input type="radio" name="order-type" value="pickup" checked> Pickup (15 min)</label>
         <label><input type="radio" name="order-type" value="delivery"> Delivery (+Rs 450)</label>
       </div>
-      <button id="checkout-btn" class="btn btn-primary full">Checkout • <span id="checkout-total">Rs 0</span></button>
+      <div class="cart-promo"><input id="cart-promo-code" type="text" placeholder="Promo code" aria-label="Promo code"><button id="cart-promo-apply" class="btn btn-ghost small-btn" type="button">Apply</button></div><p id="cart-promo-status" class="form-status small"></p><p id="cart-free-hint" class="small muted hidden"></p><p id="cart-zone-hint" class="small muted hidden"></p><button id="checkout-btn" class="btn btn-primary full">Checkout • <span id="checkout-total">Rs 0</span></button>
       <p class="small muted center">Secure checkout • Pay on pickup or card</p>
     </div>
   </aside>
@@ -207,6 +209,22 @@
       </div>
       <input type="email" id="checkout-email" placeholder="Email for receipt *" required>
       <input type="text" id="checkout-address" placeholder="Delivery address in Colombo — required if delivery" class="hidden" aria-label="Delivery address">
+      <div id="zone-wrap" class="hidden form-group" style="margin-top:0.6rem">
+  <label class="small muted" for="delivery-zone">Delivery zone (Colombo)</label>
+  <select id="delivery-zone" style="width:100%; background:var(--bg-soft); color:var(--text); border:1px solid var(--border); padding:0.55rem 0.7rem; border-radius:8px">
+    <option value="">Choose your zone</option>
+  </select>
+  <p id="zone-hint" class="small muted" style="margin-top:0.3rem"></p>
+</div>
+<div class="cart-promo" style="margin-top:0.6rem">
+  <input id="promo-code" type="text" placeholder="Promo code (optional)" aria-label="Promo code">
+  <button id="promo-apply" class="btn btn-ghost small-btn" type="button">Apply</button>
+</div>
+<p id="promo-status" class="form-status small"></p>
+<div id="loyalty-box" class="hidden small" style="background:var(--accent-ghost); border:1px solid rgba(217,119,6,0.25); padding:0.6rem 0.8rem; border-radius:8px; margin-top:0.5rem">
+  <p id="loyalty-info" style="margin:0"></p>
+  <label class="hidden" style="display:flex; align-items:center; gap:0.4rem; margin-top:0.4rem; cursor:pointer"><input type="checkbox" id="loyalty-redeem" style="width:auto"> Redeem points at checkout</label>
+</div>
       <textarea id="checkout-notes" rows="2" placeholder="Notes — e.g. 'extra hot, no sugar'"></textarea>
       <div class="pay-methods">
         <p class="eyebrow" style="font-size:0.65rem; margin-bottom:0.4rem">PAYMENT METHOD</p>

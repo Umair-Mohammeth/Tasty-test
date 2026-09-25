@@ -27,9 +27,13 @@
     <aside class="admin-sidebar">
       <nav class="admin-nav">
         <a href="index.html">◧ Dashboard</a>
-        <a href="menu.html">◈ Menu</a>
+        <a href="board.html">🧾 Board</a>
         <a href="orders.html">⬡ Orders</a>
+        <a href="menu.html">◈ Menu</a>
         <a href="inbox.html">✉ Inbox</a>
+        <a href="reservations.html">🪑 Reservations</a>
+        <a href="coupons.html" data-roles="manager,admin">% Coupons</a>
+        <a href="reports.html" data-roles="manager,admin">▤ Reports</a>
         <a href="settings.html" data-roles="admin">⚙ Settings</a>
         <div class="nav-sep"></div>
         <a href="../index.html">← View site</a>
@@ -74,6 +78,26 @@
         </table>
         <p id="no-recent" class="small muted center" style="padding:0.8rem">No orders yet.</p>
         <a href="orders.html" class="btn btn-ghost small-btn" style="margin-top:0.6rem">Go to Orders →</a>
+      </div>
+
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem; margin-top:1rem" id="loyalty-card" data-need="loyalty.view">
+        <h3 style="font-family:Cinzel; font-size:1rem; margin-bottom:0.6rem">Loyalty members</h3>
+        <p class="small muted">1 point per Rs 100 on paid orders • 100 points = Rs 1,000 off.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.7rem; margin-top:0.6rem">
+          <div>
+            <table class="admin-table">
+              <thead><tr><th>Member</th><th>Points</th><th>Value</th><th>Orders</th><th>Adjust</th></tr></thead>
+              <tbody id="loyalty-tbody"></tbody>
+            </table>
+            <p id="loyalty-empty" class="muted small center hidden" style="padding:0.8rem">No members yet — points are earned when a customer pays by card.</p>
+          </div>
+          <div>
+            <h4 style="font-size:0.75rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted)">Promo codes</h4>
+            <div class="report-bars" id="dash-coupons"></div>
+            <a href="coupons.html" class="btn btn-ghost small-btn" style="margin-top:0.6rem">Manage codes</a>
+          </div>
+        </div>
+        <p id="loyalty-status" class="form-status small" style="margin-top:0.4rem"></p>
       </div>
 
       <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem; margin-top:1rem">
@@ -125,6 +149,40 @@
           return new Intl.DateTimeFormat('en-CA', { timeZone: SL_TZ, year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date(iso));
         }catch(e){ return ''; }
       }
+      function renderLoyalty(){
+        if(!can('loyalty.view')) return;
+        const list = getLoyalty().slice().sort((a,b)=>b.points - a.points);
+        const tbody = document.getElementById('loyalty-tbody'), empty = document.getElementById('loyalty-empty');
+        if(!list.length){ tbody.innerHTML=''; empty.classList.remove('hidden'); return; }
+        empty.classList.add('hidden');
+        tbody.innerHTML = list.map(m=>`<tr>
+          <td><div style="font-weight:600">${escapeHtml(m.name)}</div><div class="small muted">${escapeHtml(m.phone)}</div></td>
+          <td><strong>${m.points}</strong></td>
+          <td class="small muted">${formatPrice(Math.floor(m.points/REDEEM_POINTS)*REDEEM_VALUE)}</td>
+          <td class="small muted">${m.orders||0}</td>
+          <td><div style="display:flex; gap:0.2rem">
+            <button data-pts="${escapeHtml(m.phone)}" data-delta="100" style="background:transparent; border:1px solid #22c55e; color:#86efac; width:26px; border-radius:6px; cursor:pointer">+</button>
+            <button data-pts="${escapeHtml(m.phone)}" data-delta="-100" style="background:transparent; border:1px solid var(--border); color:#ef4444; width:26px; border-radius:6px; cursor:pointer">−</button>
+          </div></td>
+        </tr>`).join('');
+        tbody.querySelectorAll('[data-pts]').forEach(b=> b.addEventListener('click', ()=>{
+          const res = adjustPoints(b.getAttribute('data-pts'), parseInt(b.getAttribute('data-delta'),10));
+          document.getElementById('loyalty-status').textContent = res.msg;
+          renderLoyalty();
+        }));
+      }
+      function renderCouponBars(){
+        if(!can('coupons.manage')) return;
+        const list = getCoupons();
+        const el = document.getElementById('dash-coupons');
+        if(!list.length){ el.innerHTML = '<p class="small muted">No promo codes yet.</p>'; return; }
+        const max = Math.max.apply(null, list.map(c=>c.used||0).concat([1]));
+        el.innerHTML = list.slice(0,6).map(c=>`<div class="report-bar-row">
+          <span class="muted">${escapeHtml(c.code)}</span>
+          <span class="report-bar-track"><span class="report-bar-fill" style="width:${Math.max(2, Math.round((c.used||0)/max*100))}%"></span></span>
+          <span class="report-bar-val">${c.used||0}${c.maxUses ? '/'+c.maxUses : ''}</span>
+        </div>`).join('');
+      }
       function render(){
         const orders=getOrders();
         const menu=getMenu();
@@ -134,13 +192,15 @@
         const todayKey=slDayKey(new Date().toISOString());
         document.getElementById('stat-today').textContent=orders.filter(o=> slDayKey(o.date)===todayKey).length;
         document.getElementById('menu-count').textContent=menu.length;
+        renderLoyalty();
+        renderCouponBars();
         const msgs=JSON.parse(localStorage.getItem('bc-messages')||'[]');
         const nl=JSON.parse(localStorage.getItem('bc-newsletter')||'[]');
         document.getElementById('msg-quick').textContent=msgs.length;
         document.getElementById('nl-quick').textContent=nl.length;
         const recent=orders.slice(0,5);
         const tb=document.getElementById('recent-tbody'), empty=document.getElementById('no-recent');
-        if(recent.length===0){ tb.innerHTML=''; empty.classList.remove('hidden'); } else { empty.classList.add('hidden'); tb.innerHTML=recent.map(o=>`<tr><td style="font-family:Cinzel; font-weight:700">${o.id}<div class="small muted">${formatSLDateTime(o.date)}</div></td><td>${o.customer.name}</td><td style="font-weight:700">${formatPrice(o.total)}</td><td><span class="order-status status-${o.status}" style="font-size:0.65rem; padding:0.15rem 0.4rem; border-radius:999px; border:1px solid var(--border)">${o.status}</span></td></tr>`).join(''); }
+        if(recent.length===0){ tb.innerHTML=''; empty.classList.remove('hidden'); } else { empty.classList.add('hidden'); tb.innerHTML=recent.map(o=>`<tr><td style="font-family:Cinzel; font-weight:700">${escapeHtml(o.id)}<div class="small muted">${formatSLDateTime(o.date)}</div></td><td>${escapeHtml(o.customer.name)}</td><td style="font-weight:700">${formatPrice(o.total)}</td><td><span class="order-status status-${o.status}" style="font-size:0.65rem; padding:0.15rem 0.4rem; border-radius:999px; border:1px solid var(--border)">${o.status}</span></td></tr>`).join(''); }
       }
       render();
       document.getElementById('seed-btn').addEventListener('click', ()=>{

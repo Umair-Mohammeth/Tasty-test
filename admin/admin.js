@@ -10,13 +10,30 @@ const DEFAULT_USERS = [
   { role: 'admin', label: 'Admin', pass: ADMIN_PASS, enabled: true, sessionMins: 240 },
 ];
 const PERMISSIONS = {
-  staff: ['orders.view', 'orders.status', 'inbox.view', 'menu.view'],
-  manager: ['orders.view', 'orders.status', 'orders.delete', 'inbox.view', 'inbox.manage', 'menu.view', 'menu.edit', 'reports.view', 'export'],
-  admin: ['orders.view', 'orders.status', 'orders.delete', 'inbox.view', 'inbox.manage', 'menu.view', 'menu.edit', 'reports.view', 'export', 'settings'],
+  staff: ['orders.view', 'orders.status', 'inbox.view', 'menu.view', 'board.view', 'reservations.view'],
+  manager: ['orders.view', 'orders.status', 'orders.delete', 'inbox.view', 'inbox.manage', 'menu.view', 'menu.edit', 'reports.view', 'export', 'board.view', 'reservations.view', 'reservations.manage', 'coupons.manage', 'loyalty.view'],
+  admin: ['orders.view', 'orders.status', 'orders.delete', 'inbox.view', 'inbox.manage', 'menu.view', 'menu.edit', 'reports.view', 'export', 'settings', 'board.view', 'reservations.view', 'reservations.manage', 'coupons.manage', 'loyalty.view'],
 };
 const ORDERS_KEY = 'bc-orders';
 const MENU_KEY = 'bc-menu';
+const ZONES_KEY = 'bc-zones';
+const COUPONS_KEY = 'bc-coupons';
+const RESERVATIONS_KEY = 'bc-reservations';
+const LOYALTY_KEY = 'bc-loyalty';
+const BOARD_SOUND_KEY = 'bc-board-sound';
 const SL_TZ = 'Asia/Colombo';
+const POINTS_PER_100 = 1;
+const REDEEM_POINTS = 100;
+const REDEEM_VALUE = 1000;
+const DEFAULT_ZONES = [
+  { id: 'C01', name: 'Colombo 01 — Fort', fee: 400, min: 1500, freeOver: 3000, active: true },
+  { id: 'C02', name: 'Colombo 02 — Slave Island', fee: 400, min: 1500, freeOver: 3000, active: true },
+  { id: 'C03', name: 'Colombo 03 — Kollupitiya', fee: 450, min: 2000, freeOver: 3500, active: true },
+  { id: 'C04', name: 'Colombo 04 — Bambalapitiya', fee: 500, min: 2000, freeOver: 3500, active: true },
+  { id: 'C05', name: 'Colombo 05 — Havelock Town', fee: 500, min: 2500, freeOver: 4000, active: true },
+  { id: 'C06', name: 'Colombo 06 — Wellawatte', fee: 600, min: 2500, freeOver: 4000, active: true },
+  { id: 'C07', name: 'Colombo 07 — Cinnamon Gardens', fee: 450, min: 2000, freeOver: 3500, active: true },
+];
 const DEFAULT_MENU = [
   { id: 'midnight', name: 'Midnight Espresso', price: 650, cat: 'espresso', badge: 'House', desc: 'Double shot, dark chocolate, smoked cherry. Our signature.', img: 'https://images.unsplash.com/photo-1510707577719-ae7c14805e3a?auto=format&fit=crop&w=600&q=80' },
   { id: 'obsidian', name: 'Obsidian Latte', price: 850, cat: 'espresso', desc: 'Activated charcoal, oat milk, vanilla — black as night.', img: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=600&q=80' },
@@ -156,6 +173,116 @@ function getOrders(){ try{ const v=localStorage.getItem(ORDERS_KEY); return v? J
 function saveOrders(o){ localStorage.setItem(ORDERS_KEY, JSON.stringify(o)); }
 function getMenu(){ try{ const v=localStorage.getItem(MENU_KEY); if(v){ const p=JSON.parse(v); if(Array.isArray(p)) return p; } }catch(e){} return JSON.parse(JSON.stringify(DEFAULT_MENU)); }
 function saveMenu(m){ localStorage.setItem(MENU_KEY, JSON.stringify(m)); }
+function readList(key, fallback){
+  try{ const v=localStorage.getItem(key); if(v){ const p=JSON.parse(v); if(Array.isArray(p)) return p; } }catch(e){}
+  return JSON.parse(JSON.stringify(fallback));
+}
+function getZones(){ return readList(ZONES_KEY, DEFAULT_ZONES); }
+function saveZones(z){ localStorage.setItem(ZONES_KEY, JSON.stringify(z)); }
+function getCoupons(){ return readList(COUPONS_KEY, []); }
+function saveCoupons(c){ localStorage.setItem(COUPONS_KEY, JSON.stringify(c)); }
+function getReservations(){ return readList(RESERVATIONS_KEY, []); }
+function saveReservations(r){ localStorage.setItem(RESERVATIONS_KEY, JSON.stringify(r)); }
+function getLoyalty(){ return readList(LOYALTY_KEY, []); }
+function saveLoyalty(l){ localStorage.setItem(LOYALTY_KEY, JSON.stringify(l)); }
+function normalizePhone(p){ return String(p||'').replace(/\D/g,'').slice(-9); }
+function getMember(phone){
+  const key = normalizePhone(phone);
+  if(!key) return null;
+  return getLoyalty().find(m=>m.phone === key) || null;
+}
+function earnPoints(phone, name, total){
+  const key = normalizePhone(phone);
+  if(!key) return 0;
+  const points = Math.floor(Number(total||0) / 100) * POINTS_PER_100;
+  if(points <= 0) return 0;
+  const list = getLoyalty();
+  let m = list.find(x=>x.phone === key);
+  if(!m){ m = { phone:key, name: name||'Guest', points:0, earned:0, redeemed:0, orders:0, spend:0 }; list.push(m); }
+  m.points += points; m.earned += points; m.orders += 1; m.spend += Number(total||0);
+  if(name) m.name = name;
+  saveLoyalty(list);
+  return points;
+}
+function redeemPoints(phone, points){
+  const key = normalizePhone(phone);
+  const list = getLoyalty();
+  const m = list.find(x=>x.phone === key);
+  if(!m) return { ok:false, msg:'No loyalty balance for this number.' };
+  if(m.points < points) return { ok:false, msg:`Not enough points — you have ${m.points}.` };
+  m.points -= points; m.redeemed += points;
+  saveLoyalty(list);
+  return { ok:true, msg:`Redeemed ${points} points.` };
+}
+function boardSoundOn(){ try{ return localStorage.getItem(BOARD_SOUND_KEY) !== '0'; }catch(e){ return true; } }
+function setBoardSoundOn(on){ try{ localStorage.setItem(BOARD_SOUND_KEY, on ? '1' : '0'); }catch(e){} }
+const BACKUP_KEYS = ['bc-menu','bc-cart','bc-orders','bc-messages','bc-newsletter','bc-favorites','bc-cart-meta','bc-coupons','bc-zones','bc-reservations','bc-loyalty'];
+function exportData(){
+  const data = {};
+  BACKUP_KEYS.forEach(k => { data[k] = localStorage.getItem(k); });
+  return data;
+}
+function importData(data){
+  if(!data || typeof data !== 'object') return { ok:false, msg:'Invalid backup file.' };
+  let n = 0;
+  BACKUP_KEYS.forEach(k => { if(data[k] !== undefined && data[k] !== null){ localStorage.setItem(k, data[k]); n++; } });
+  return { ok:true, msg:`Restored ${n} key(s). Reloading…`, count:n };
+}
+function adjustPoints(phone, delta){
+  if(!can('loyalty.view')) return { ok:false, msg:'Manager or admin only.' };
+  const key = normalizePhone(phone);
+  const list = getLoyalty();
+  let m = list.find(x=>x.phone === key);
+  if(!m) return { ok:false, msg:'Member not found.' };
+  m.points = Math.max(0, m.points + Number(delta||0));
+  if(delta > 0) m.earned += Number(delta);
+  if(delta < 0) m.redeemed += Math.abs(Number(delta));
+  saveLoyalty(list);
+  return { ok:true, msg:`${m.name} now has ${m.points} points.` };
+}
+function setReservationStatus(id, status){
+  if(!can('reservations.manage')) return { ok:false, msg:'Manager or admin only.' };
+  const list = getReservations();
+  const r = list.find(x=>x.id === id);
+  if(!r) return { ok:false, msg:'Reservation not found.' };
+  r.status = status;
+  saveReservations(list);
+  return { ok:true, msg:`Reservation ${r.id} ${status}.` };
+}
+function escapeHtml(v){
+  return String(v === undefined || v === null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function couponDiscountValue(coupon, subtotal){
+  if(!coupon) return 0;
+  const sub = Number(subtotal) || 0;
+  let value = coupon.type === 'percent' ? Math.round(sub * (Number(coupon.value) || 0) / 100) : Math.round(Number(coupon.value) || 0);
+  if(coupon.maxDiscount) value = Math.min(value, Number(coupon.maxDiscount));
+  return Math.min(value, sub);
+}
+function couponIsUsable(coupon, subtotal){
+  if(!coupon) return { ok:false, msg:'Invalid code.' };
+  if(coupon.active === false) return { ok:false, msg:'This code is no longer active.' };
+  if(coupon.expires && new Date(coupon.expires) < new Date()) return { ok:false, msg:'This code has expired.' };
+  if(coupon.maxUses && coupon.used >= coupon.maxUses) return { ok:false, msg:'This code has reached its usage limit.' };
+  const min = Number(coupon.minSpend) || 0;
+  if(Number(subtotal) < min) return { ok:false, msg:`Minimum spend ${formatPrice(min)} for this code.` };
+  return { ok:true, msg:'Code applied.' };
+}
+function findCoupon(code){
+  const c = String(code||'').trim().toUpperCase();
+  if(!c) return null;
+  return getCoupons().find(x=>String(x.code||'').toUpperCase() === c) || null;
+}
+function slDayKey(iso){
+  try{ return new Intl.DateTimeFormat('en-CA', { timeZone: SL_TZ, year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date(iso)); }
+  catch(e){ return ''; }
+}
+function slDateTimeLocal(iso){
+  try{ return new Intl.DateTimeFormat('en-CA', { timeZone: SL_TZ, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false }).format(new Date(iso)); }
+  catch(e){ return ''; }
+}
 function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,30) || 'item-'+Date.now().toString(36); }
 const lkrFmt = new Intl.NumberFormat('en-LK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 function formatPrice(n){ return 'Rs ' + lkrFmt.format(Number(n) || 0); }

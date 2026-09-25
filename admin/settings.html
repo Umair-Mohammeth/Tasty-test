@@ -19,9 +19,13 @@
     <aside class="admin-sidebar">
       <nav class="admin-nav">
         <a href="index.html">◧ Dashboard</a>
-        <a href="menu.html">◈ Menu</a>
+        <a href="board.html">🧾 Board</a>
         <a href="orders.html">⬡ Orders</a>
+        <a href="menu.html">◈ Menu</a>
         <a href="inbox.html">✉ Inbox</a>
+        <a href="reservations.html">🪑 Reservations</a>
+        <a href="coupons.html" data-roles="manager,admin">% Coupons</a>
+        <a href="reports.html" data-roles="manager,admin">▤ Reports</a>
         <a href="settings.html" data-roles="admin">⚙ Settings</a>
         <div class="nav-sep"></div>
         <a href="../index.html">← View site</a>
@@ -66,6 +70,20 @@
           </div>
           <p id="accounts-status" class="form-status small"></p>
           <p class="small muted" style="margin-top:0.4rem">Limits: 5 wrong passwords → locked 10 min (per role). Idle session timeout per role above. Defaults live in <code>DEFAULT_USERS</code> in <code>admin/admin.js</code>; changes are stored in <code>bc-admin-users</code>. Staff and manager can be disabled — they then cannot log in at all. Admin cannot be disabled.</p>
+        </div>
+
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
+          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.6rem">Delivery Zones</h3>
+          <p class="small muted">Per-zone delivery fee, minimum order and free-delivery threshold. Shown on the cart, checkout and the Visit page.</p>
+          <table class="admin-table" style="margin-top:0.5rem">
+            <thead><tr><th>Zone</th><th>Fee (Rs)</th><th>Min order (Rs)</th><th>Free over (Rs)</th><th>Active</th></tr></thead>
+            <tbody id="zones-tbody"></tbody>
+          </table>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.7rem">
+            <button id="zones-save" class="btn btn-primary small-btn">Save zones</button>
+            <button id="zones-reset" class="btn btn-ghost small-btn">Reset to default</button>
+          </div>
+          <p id="zones-status" class="form-status small"></p>
         </div>
 
         <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
@@ -149,8 +167,36 @@
           localStorage.removeItem('bc-orders'); localStorage.removeItem('bc-menu'); localStorage.removeItem('bc-messages'); localStorage.removeItem('bc-newsletter'); alert('Cleared. Reload pages to see defaults.');
         }
       });
+      const zonesStatus=document.getElementById('zones-status');
+      function renderZones(){
+        const zones=getZones();
+        document.getElementById('zones-tbody').innerHTML=zones.map((z,i)=>`<tr>
+          <td><div style="font-weight:600">${escapeHtml(z.name)}</div><div class="small muted">${escapeHtml(z.id)}</div></td>
+          <td><input type="number" min="0" step="1" value="${Number(z.fee)||0}" data-zfee="${escapeHtml(z.id)}" style="width:100px; background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.3rem 0.5rem; border-radius:6px"></td>
+          <td><input type="number" min="0" step="1" value="${Number(z.min)||0}" data-zmin="${escapeHtml(z.id)}" style="width:100px; background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.3rem 0.5rem; border-radius:6px"></td>
+          <td><input type="number" min="0" step="1" value="${Number(z.freeOver)||0}" data-zfree="${escapeHtml(z.id)}" style="width:100px; background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.3rem 0.5rem; border-radius:6px"></td>
+          <td><label style="display:flex; align-items:center; gap:0.3rem; cursor:pointer"><input type="checkbox" data-zon="${escapeHtml(z.id)}" ${z.active!==false?'checked':''} style="width:auto"> on</label></td>
+        </tr>`).join('');
+      }
+      document.getElementById('zones-save').addEventListener('click', ()=>{
+        const zones=getZones().map(z=>{
+          const fee=document.querySelector('[data-zfee="'+z.id+'"]').value;
+          const min=document.querySelector('[data-zmin="'+z.id+'"]').value;
+          const free=document.querySelector('[data-zfree="'+z.id+'"]').value;
+          const on=document.querySelector('[data-zon="'+z.id+'"]').checked;
+          return { ...z, fee:parseInt(fee,10)||0, min:parseInt(min,10)||0, freeOver:parseInt(free,10)||0, active:on };
+        });
+        saveZones(zones);
+        zonesStatus.textContent='Zones saved ('+zones.length+').';
+        renderZones();
+      });
+      document.getElementById('zones-reset').addEventListener('click', ()=>{
+        if(confirm('Reset delivery zones to the default Colombo 1-7 rates?')){ localStorage.removeItem(ZONES_KEY); renderZones(); zonesStatus.textContent='Zones reset to default.'; }
+      });
+      renderZones();
+
       document.getElementById('export-data').addEventListener('click', ()=>{
-        const data = window.BC_EXPORT_DATA();
+        const data = exportData();
         const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -164,12 +210,12 @@
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (e) => {
-          try {
-            const data = JSON.parse(e.target.result);
-            window.BC_IMPORT_DATA(data);
-          } catch(err) {
-            document.getElementById('backup-status').textContent = 'Import failed: invalid JSON';
-          }
+          let data;
+          try { data = JSON.parse(e.target.result); }
+          catch(err) { document.getElementById('backup-status').textContent = 'Import failed: invalid JSON'; return; }
+          const res = importData(data);
+          document.getElementById('backup-status').textContent = res.msg;
+          if(res.ok) setTimeout(() => location.reload(), 800);
         };
         reader.readAsText(file);
       };

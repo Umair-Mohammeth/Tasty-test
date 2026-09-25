@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Black Coffin — Order Board</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <meta name="color-scheme" content="dark">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">ORDER BOARD</span></span></a>
+      <nav class="nav"><span id="sl-clock" class="small muted">Sri Lanka time</span><span id="role-badge" class="badge" style="position:static" hidden></span><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
+    </div>
+  </header>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="index.html">◧ Dashboard</a>
+        <a href="board.html">🧾 Board</a>
+        <a href="orders.html">⬡ Orders</a>
+        <a href="menu.html">◈ Menu</a>
+        <a href="inbox.html">✉ Inbox</a>
+        <a href="reservations.html">🪑 Reservations</a>
+        <a href="coupons.html" data-roles="manager,admin">% Coupons</a>
+        <a href="reports.html" data-roles="manager,admin">▤ Reports</a>
+        <a href="settings.html" data-roles="admin">⚙ Settings</a>
+        <div class="nav-sep"></div>
+        <a href="../index.html">← View site</a>
+      </nav>
+    </aside>
+    <main class="admin-main">
+      <h1 class="admin-page-title">Order Board</h1>
+      <p class="admin-page-sub">Live queue — click a card to move it to the next stage. Refreshes automatically.</p>
+
+      <div class="board-toolbar">
+        <button id="sound-toggle" class="btn btn-ghost small-btn">🔔 Sound: On</button>
+        <button id="board-refresh" class="btn btn-ghost small-btn">Refresh</button>
+        <span class="small muted">Completed today: <strong id="board-done">0</strong></span>
+        <span class="small muted">•</span>
+        <span class="small muted">Oldest waiting: <strong id="board-oldest">—</strong></span>
+      </div>
+
+      <div class="board-grid">
+        <section class="board-col" data-status="pending">
+          <h3><span>Pending</span><span id="count-pending">0</span></h3>
+          <div class="board-cards" id="col-pending"></div>
+        </section>
+        <section class="board-col" data-status="preparing">
+          <h3><span>Preparing</span><span id="count-preparing">0</span></h3>
+          <div class="board-cards" id="col-preparing"></div>
+        </section>
+        <section class="board-col" data-status="ready">
+          <h3><span>Ready</span><span id="count-ready">0</span></h3>
+          <div class="board-cards" id="col-ready"></div>
+        </section>
+      </div>
+
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem; margin-top:1rem">
+        <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.6rem">Delivered / completed (recent)</h3>
+        <div class="board-cards" id="col-done"></div>
+      </div>
+    </main>
+  </div>
+  <script src="admin.js"></script>
+  <script>
+    if(!requireAuth('board.view')) {} else {
+      const seenIds = new Set();
+      let firstRun = true;
+      let audioCtx = null;
+
+      function beep(){
+        if(!boardSoundOn()) return;
+        try{
+          if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          if(audioCtx.state === 'suspended') audioCtx.resume();
+          const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+          o.type = 'sine'; o.frequency.value = 880;
+          g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.55);
+          o.connect(g); g.connect(audioCtx.destination);
+          o.start(); o.stop(audioCtx.currentTime + 0.6);
+        }catch(e){}
+      }
+
+      function elapsed(iso){
+        const secs = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+        const m = Math.floor(secs / 60), s = secs % 60;
+        if(m >= 60) return `${Math.floor(m/60)}h ${m%60}m`;
+        return `${m}m ${String(s).padStart(2,'0')}s`;
+      }
+
+      function card(o, isNew){
+        const items = o.items.map(i=>`${escapeHtml(i.name)} ×${i.qty}`).join('<br>');
+        const typeBadge = o.orderType === 'delivery'
+          ? `<span class="order-status status-preparing" style="font-size:0.6rem">delivery${o.zoneName ? ' — ' + escapeHtml(o.zoneName) : ''}</span>`
+          : `<span class="order-status status-ready" style="font-size:0.6rem">pickup</span>`;
+        return `<article class="board-card${isNew ? ' is-new' : ''}" data-order="${escapeHtml(o.id)}">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem">
+            <span class="bc-id">${escapeHtml(o.id)}</span>
+            <span class="bc-elapsed" data-since="${escapeHtml(o.date)}">${elapsed(o.date)}</span>
+          </div>
+          <div style="margin:0.25rem 0">${typeBadge}</div>
+          <div class="bc-items">${items}</div>
+          <div class="bc-cust">${escapeHtml(o.customer.name)} • <a href="tel:${escapeHtml(o.customer.phone)}" style="color:var(--accent-light)">${escapeHtml(o.customer.phone)}</a></div>
+          ${o.notes ? `<div class="bc-note">“${escapeHtml(o.notes)}”</div>` : ''}
+          ${o.notes || o.promoSummary ? '' : ''}
+        </article>`;
+      }
+
+      function advance(id){
+        const all = getOrders();
+        const o = all.find(x=>x.id === id);
+        if(!o) return;
+        const flow = ['pending','preparing','ready','delivered'];
+        const i = flow.indexOf(o.status);
+        o.status = flow[Math.min(flow.length - 1, i + 1)];
+        if(o.status === 'delivered'){ o.deliveredAt = new Date().toISOString(); }
+        saveOrders(all);
+        render();
+      }
+
+      function render(){
+        const orders = getOrders();
+        const active = orders.filter(o => ['pending','preparing','ready'].includes(o.status));
+        const newOnes = [];
+        if(!firstRun){
+          active.forEach(o => { if(!seenIds.has(o.id)) newOnes.push(o.id); });
+        }
+        active.forEach(o => seenIds.add(o.id));
+
+        ['pending','preparing','ready'].forEach(st => {
+          const list = active.filter(o => o.status === st);
+          const el = document.getElementById('col-' + st);
+          el.innerHTML = list.length
+            ? list.map(o => card(o, newOnes.includes(o.id))).join('')
+            : '<p class="board-empty">Nothing here</p>';
+          document.getElementById('count-' + st).textContent = list.length;
+          el.querySelectorAll('.board-card').forEach(c => c.addEventListener('click', () => advance(c.getAttribute('data-order'))));
+        });
+
+        const todayKey = slDayKey(new Date().toISOString());
+        const done = orders.filter(o => o.status === 'delivered' && slDayKey(o.deliveredAt || o.date) === todayKey);
+        document.getElementById('board-done').textContent = done.length;
+        const doneEl = document.getElementById('col-done');
+        doneEl.innerHTML = done.length
+          ? done.slice(0,12).map(o => `<div class="board-card" style="cursor:default; border-left-color:#22c55e; opacity:0.75">
+              <div style="display:flex; justify-content:space-between; gap:0.5rem">
+                <span class="bc-id">${escapeHtml(o.id)}</span>
+                <span class="small muted">${formatSLDateTime(o.deliveredAt || o.date)}</span>
+              </div>
+              <div class="bc-cust">${escapeHtml(o.customer.name)} • ${formatPrice(o.total)}</div>
+            </div>`).join('')
+          : '<p class="board-empty">No completed orders today</p>';
+
+        const oldest = active.reduce((a,o) => !a || new Date(o.date) < new Date(a.date) ? o : a, null);
+        document.getElementById('board-oldest').textContent = oldest ? `${elapsed(oldest.date)} (${oldest.id})` : '—';
+
+        if(newOnes.length){ beep(); }
+        firstRun = false;
+        tickTimers();
+      }
+
+      function tickTimers(){
+        document.querySelectorAll('[data-since]').forEach(el => { el.textContent = elapsed(el.getAttribute('data-since')); });
+      }
+
+      const soundBtn = document.getElementById('sound-toggle');
+      function paintSound(){ soundBtn.textContent = boardSoundOn() ? '🔔 Sound: On' : '🔕 Sound: Off'; }
+      soundBtn.addEventListener('click', () => { setBoardSoundOn(!boardSoundOn()); paintSound(); if(boardSoundOn()) beep(); });
+      document.getElementById('board-refresh').addEventListener('click', render);
+      paintSound();
+
+      window.addEventListener('storage', e => { if(e.key === ORDERS_KEY || e.key === null) render(); });
+      setInterval(render, 1000);
+      setInterval(tickTimers, 1000);
+      render();
+    }
+  </script>
+</body>
+</html>

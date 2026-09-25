@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Black Coffin — Reservations</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <meta name="color-scheme" content="dark">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">RESERVATIONS</span></span></a>
+      <nav class="nav"><span id="sl-clock" class="small muted">Sri Lanka time</span><span id="role-badge" class="badge" style="position:static" hidden></span><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
+    </div>
+  </header>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="index.html">◧ Dashboard</a>
+        <a href="board.html">🧾 Board</a>
+        <a href="orders.html">⬡ Orders</a>
+        <a href="menu.html">◈ Menu</a>
+        <a href="inbox.html">✉ Inbox</a>
+        <a href="reservations.html">🪑 Reservations</a>
+        <a href="coupons.html" data-roles="manager,admin">% Coupons</a>
+        <a href="reports.html" data-roles="manager,admin">▤ Reports</a>
+        <a href="settings.html" data-roles="admin">⚙ Settings</a>
+        <div class="nav-sep"></div>
+        <a href="../index.html">← View site</a>
+      </nav>
+    </aside>
+    <main class="admin-main">
+      <h1 class="admin-page-title">Table Reservations</h1>
+      <p class="admin-page-sub">Customer bookings from the Visit page. Stored in <code>bc-reservations</code>.</p>
+
+      <div class="stat-grid" id="resv-stats">
+        <div class="stat-card"><strong id="rs-pending">0</strong><span>Pending</span></div>
+        <div class="stat-card"><strong id="rs-confirmed">0</strong><span>Confirmed</span></div>
+        <div class="stat-card"><strong id="rs-today">0</strong><span>Today</span></div>
+        <div class="stat-card"><strong id="rs-guests">0</strong><span>Guests booked</span></div>
+      </div>
+
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem; overflow:auto">
+        <table class="admin-table">
+          <thead><tr><th>Date</th><th>Slot</th><th>Guests</th><th>Name</th><th>Contact</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="resv-tbody"></tbody>
+        </table>
+        <p id="resv-empty" class="muted small center hidden" style="padding:0.8rem">No reservations yet.</p>
+      </div>
+    </main>
+  </div>
+  <script src="admin.js"></script>
+  <script>
+    if(!requireAuth('reservations.view')) {} else {
+      const canManage = can('reservations.manage');
+
+      function render(){
+        const list = getReservations().slice().sort((a,b) => (a.date + a.slot).localeCompare(b.date + b.slot));
+        const todayKey = slDayKey(new Date().toISOString());
+        document.getElementById('rs-pending').textContent = list.filter(r=>r.status==='pending').length;
+        document.getElementById('rs-confirmed').textContent = list.filter(r=>r.status==='confirmed').length;
+        document.getElementById('rs-today').textContent = list.filter(r=>slDayKey(r.created) === todayKey).length;
+        document.getElementById('rs-guests').textContent = list.filter(r=>r.status==='confirmed').reduce((s,r)=>s+Number(r.guests||0),0);
+
+        const tbody = document.getElementById('resv-tbody'), empty = document.getElementById('resv-empty');
+        if(!list.length){ tbody.innerHTML=''; empty.classList.remove('hidden'); return; }
+        empty.classList.add('hidden');
+        tbody.innerHTML = list.map(r=>{
+          const cls = r.status === 'confirmed' ? 'status-confirmed' : r.status === 'declined' ? 'status-declined' : r.status === 'cancelled' ? 'status-cancelled' : 'status-pending';
+          return `<tr>
+            <td>${escapeHtml(r.date)}</td>
+            <td>${escapeHtml(r.slot)}</td>
+            <td>${escapeHtml(r.guests)}</td>
+            <td><div style="font-weight:600">${escapeHtml(r.name)}</div>${r.notes ? `<div class="small muted">${escapeHtml(r.notes)}</div>` : ''}</td>
+            <td class="small muted">${escapeHtml(r.phone)}<br>${escapeHtml(r.email||'')}</td>
+            <td><span class="order-status ${cls}" style="font-size:0.65rem">${escapeHtml(r.status)}</span></td>
+            <td>${canManage && r.status !== 'cancelled' ? `<div style="display:flex; gap:0.3rem; flex-wrap:wrap">
+              ${r.status !== 'confirmed' ? `<button data-confirm="${escapeHtml(r.id)}" style="background:transparent; border:1px solid #22c55e; color:#86efac; padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Confirm</button>` : ''}
+              ${r.status !== 'declined' ? `<button data-decline="${escapeHtml(r.id)}" style="background:transparent; border:1px solid var(--border); color:var(--muted); padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Decline</button>` : ''}
+              <button data-cancel="${escapeHtml(r.id)}" style="background:transparent; border:1px solid var(--border); color:#ef4444; padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Cancel</button>
+            </div>` : `<span class="small muted">${r.status === 'cancelled' ? '—' : 'staff view'}</span>`}</td>
+          </tr>`;
+        }).join('');
+        tbody.querySelectorAll('[data-confirm]').forEach(b=> b.addEventListener('click', ()=>{ setReservationStatus(b.getAttribute('data-confirm'),'confirmed'); render(); }));
+        tbody.querySelectorAll('[data-decline]').forEach(b=> b.addEventListener('click', ()=>{ setReservationStatus(b.getAttribute('data-decline'),'declined'); render(); }));
+        tbody.querySelectorAll('[data-cancel]').forEach(b=> b.addEventListener('click', ()=>{ if(confirm('Cancel this reservation?')){ setReservationStatus(b.getAttribute('data-cancel'),'cancelled'); render(); } }));
+      }
+      render();
+    }
+  </script>
+</body>
+</html>

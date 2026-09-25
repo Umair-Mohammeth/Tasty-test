@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const parsed = cur ? JSON.parse(cur) : null;
         if(Array.isArray(parsed) && parsed.length){ menu = parsed; } else { menu = JSON.parse(JSON.stringify(DEFAULT_MENU)); }
         lastMenuJSON = JSON.stringify(menu);
+        buildLunrIndex();
         renderMenu(); renderCart();
         // optional toast for debug: console.log('menu updated');
       }
@@ -85,7 +86,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const CART_KEY = 'bc-cart';
   const ORDERS_KEY = 'bc-orders';
   const FAVORITES_KEY = 'bc-favorites';
-  const BACKUP_KEYS = ['bc-menu','bc-cart','bc-orders','bc-messages','bc-newsletter','bc-favorites'];
+  const CART_META_KEY = 'bc-cart-meta';
+  const LOYALTY_KEY = 'bc-loyalty';
+  const COUPONS_KEY = 'bc-coupons';
+  const ZONES_KEY = 'bc-zones';
+  const POINTS_PER_100 = 1;
+  const REDEEM_POINTS = 100;
+  const REDEEM_VALUE = 1000;
+  const BACKUP_KEYS = ['bc-menu','bc-cart','bc-orders','bc-messages','bc-newsletter','bc-favorites','bc-cart-meta','bc-coupons','bc-zones','bc-reservations','bc-loyalty'];
   let cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
   const pendingQty = {};
 
@@ -97,6 +105,65 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveOrders(orders) { localStorage.setItem(ORDERS_KEY, JSON.stringify(orders)); }
   function getFavorites() { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); }
   function saveFavorites(favs) { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs)); }
+  function getCartMeta() { try{ const m=JSON.parse(localStorage.getItem(CART_META_KEY)||'{}'); return m && typeof m==='object' ? m : {}; }catch(e){ return {}; } }
+  function saveCartMeta(m) { localStorage.setItem(CART_META_KEY, JSON.stringify(m)); }
+  function getZones() { try{ const z=JSON.parse(localStorage.getItem(ZONES_KEY)||'[]'); return Array.isArray(z) && z.length ? z : []; }catch(e){ return []; } }
+  function getCoupons() { try{ const c=JSON.parse(localStorage.getItem(COUPONS_KEY)||'[]'); return Array.isArray(c) ? c : []; }catch(e){ return []; } }
+  function getLoyalty() { try{ const l=JSON.parse(localStorage.getItem(LOYALTY_KEY)||'[]'); return Array.isArray(l) ? l : []; }catch(e){ return []; } }
+  function saveLoyalty(list) { localStorage.setItem(LOYALTY_KEY, JSON.stringify(list)); }
+  function normalizePhone(p) { return String(p||'').replace(/\D/g,'').slice(-9); }
+  function getMember(phone) { const key=normalizePhone(phone); if(!key) return null; return getLoyalty().find(m=>m.phone===key) || null; }
+  function isSoldOut(item) { return !!item.soldOut || item.stock === 0; }
+  function findCoupon(code) {
+    const c = String(code||'').trim().toUpperCase();
+    if(!c) return null;
+    return getCoupons().find(x=>String(x.code||'').toUpperCase() === c) || null;
+  }
+  function couponUsable(coupon, subtotal) {
+    if(!coupon) return { ok:false, msg:'Invalid promo code.' };
+    if(coupon.active === false) return { ok:false, msg:'This promo code is no longer active.' };
+    if(coupon.expires && new Date(coupon.expires) < new Date()) return { ok:false, msg:'This promo code has expired.' };
+    if(coupon.maxUses && (coupon.used||0) >= coupon.maxUses) return { ok:false, msg:'This promo code has reached its usage limit.' };
+    const min = Number(coupon.minSpend) || 0;
+    if(Number(subtotal) < min) return { ok:false, msg:`Minimum spend ${formatPrice(min)} for this code.` };
+    return { ok:true, msg:`Promo ${String(coupon.code).toUpperCase()} applied.` };
+  }
+  function couponDiscount(coupon, subtotal) {
+    if(!coupon) return 0;
+    const sub = Number(subtotal) || 0;
+    let value = coupon.type === 'percent' ? Math.round(sub * (Number(coupon.value)||0) / 100) : Math.round(Number(coupon.value)||0);
+    if(coupon.maxDiscount) value = Math.min(value, Number(coupon.maxDiscount));
+    return Math.min(value, sub);
+  }
+  function redeemablePoints(member) {
+    if(!member) return 0;
+    return Math.floor(member.points / REDEEM_POINTS) * REDEEM_POINTS;
+  }
+  function earnPointsOnOrder(phone, name, total){
+    const key = normalizePhone(phone);
+    if(!key) return 0;
+    const points = Math.floor(Number(total||0) / 100) * POINTS_PER_100;
+    if(points <= 0) return 0;
+    const list = getLoyalty();
+    let m = list.find(x=>x.phone === key);
+    if(!m){ m = { phone:key, name: name||'Guest', points:0, earned:0, redeemed:0, orders:0, spend:0 }; list.push(m); }
+    m.points += points; m.earned += points; m.orders += 1; m.spend += Number(total||0);
+    if(name) m.name = name;
+    saveLoyalty(list);
+    return points;
+  }
+  function decrementStock(items){
+    let changed = false;
+    const next = menu.map(m => {
+      if(m.stock === undefined || m.stock === null) return m;
+      const line = items.find(i => i.id === m.id);
+      if(!line) return m;
+      const left = Number(m.stock) - Number(line.qty);
+      changed = true;
+      return { ...m, stock: Math.max(0, left), soldOut: left <= 0 ? true : m.soldOut };
+    });
+    if(changed){ menu = next; saveMenu(next); lastMenuJSON = JSON.stringify(next); }
+  }
   function toggleFavorite(id) {
     const favs = getFavorites();
     const idx = favs.indexOf(id);
@@ -145,27 +212,30 @@ document.addEventListener('DOMContentLoaded', () => {
     items.forEach(item => {
       const qty = pendingQty[item.id] || 1;
       const fav = isFavorite(item.id);
+      const out = isSoldOut(item);
+      const low = !out && item.stock > 0 && item.stock <= 5;
       const card = document.createElement('article');
-      card.className = 'card';
+      card.className = 'card' + (out ? ' card-out' : '');
       card.innerHTML = `
         <div class="card-img">
           <img src="${item.img}" alt="${item.name}" loading="lazy">
-          ${item.badge ? `<span class="badge">${item.badge}</span>` : ''}
+          ${item.badge ? `<span class="badge">${escapeText(item.badge)}</span>` : ''}
+          ${out ? `<span class="soldout-tag">Sold out</span>` : low ? `<span class="stock-tag">Only ${item.stock} left</span>` : ''}
           <button class="heart-btn" data-fav="${item.id}" aria-label="${fav ? 'Remove from favorites' : 'Add to favorites'}" style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); border:none; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1.1rem; color:${fav ? '#ef4444' : '#fff'}; transition:color 0.2s">${fav ? '♥' : '♡'}</button>
         </div>
         <div class="card-body">
           <div class="card-top">
-            <h3>${item.name}</h3>
+            <h3>${escapeText(item.name)}</h3>
             <span class="price">${formatPrice(item.price)}</span>
           </div>
-          <p class="card-desc">${item.desc}</p>
+          <p class="card-desc">${escapeText(item.desc)}</p>
           <div class="card-foot">
             <div class="qty-ctrl">
-              <button aria-label="Decrease quantity" data-dec="${item.id}">−</button>
+              <button aria-label="Decrease quantity" data-dec="${item.id}" ${out?'disabled':''}>−</button>
               <span data-qty="${item.id}">${qty}</span>
-              <button aria-label="Increase quantity" data-inc="${item.id}">+</button>
+              <button aria-label="Increase quantity" data-inc="${item.id}" ${out?'disabled':''}>+</button>
             </div>
-            <button class="btn btn-primary add-btn" data-add="${item.id}">Add • ${formatPrice(item.price * qty)}</button>
+            <button class="btn btn-primary add-btn" data-add="${item.id}" ${out?'disabled':''}>${out ? 'Sold out' : 'Add • ' + formatPrice(item.price * qty)}</button>
           </div>
         </div>
       `;
@@ -196,15 +266,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const cartCountDrawerEl = $('#cart-count-drawer');
   const cartSubtotalEl = $('#cart-subtotal');
   const cartDeliveryEl = $('#cart-delivery');
+  const cartDiscountEl = $('#cart-discount');
+  const cartZoneHint = $('#cart-zone-hint');
+  const cartFreeHint = $('#cart-free-hint');
   const cartTotalEl = $('#cart-total');
   const checkoutTotalEl = $('#checkout-total');
   const modalTotalEl = $('#modal-total');
 
-  function cartTotals() {
+  function cartTotals(phone){
     const subtotal = cart.reduce((s, c) => { const m = menu.find(x => x.id === c.id); return s + (m ? m.price * c.qty : 0); }, 0);
     const isDelivery = document.querySelector('input[name="order-type"]:checked')?.value === 'delivery';
-    const deliveryFee = isDelivery && subtotal > 0 && subtotal < FREE_DELIVERY_OVER ? DELIVERY_FEE : 0;
-    return { subtotal, deliveryFee, total: subtotal + deliveryFee, isDelivery };
+    const meta = getCartMeta();
+    const zones = getZones().filter(z => z.active !== false);
+    const zone = zones.find(z => z.id === meta.zone) || null;
+    const zoneFee = zone ? Number(zone.fee) || 0 : DELIVERY_FEE;
+    const zoneMin = zone ? Number(zone.min) || 0 : 0;
+    const zoneFreeOver = zone ? (Number(zone.freeOver) || Number(zone.min) || 0) : FREE_DELIVERY_OVER;
+    let deliveryFee = 0;
+    if (isDelivery && subtotal > 0) deliveryFee = subtotal >= zoneFreeOver ? 0 : zoneFee;
+    const coupon = meta.couponCode ? findCoupon(meta.couponCode) : null;
+    const couponOk = coupon ? couponUsable(coupon, subtotal) : { ok:false };
+    const discount = couponOk.ok ? couponDiscount(coupon, subtotal) : 0;
+    const member = phone ? getMember(phone) : null;
+    const maxRedeem = redeemablePoints(member);
+    const pointsWanted = Number(meta.redeemPoints) || 0;
+    const pointsUsed = meta.redeem && pointsWanted > 0 ? Math.min(pointsWanted, maxRedeem) : 0;
+    const loyaltyDiscount = pointsUsed ? Math.min(Math.round(pointsUsed / REDEEM_POINTS * REDEEM_VALUE), Math.max(0, subtotal - discount)) : 0;
+    const total = Math.max(0, subtotal - discount - loyaltyDiscount + deliveryFee);
+    return {
+      subtotal, discount, coupon, couponOk, deliveryFee, total, isDelivery,
+      zone, zoneMin, zoneFee, zoneFreeOver,
+      member, pointsUsed, loyaltyDiscount,
+      minOrderOk: !isDelivery || subtotal >= zoneMin,
+      remainingForFree: Math.max(0, zoneFreeOver - subtotal),
+      remainingForMin: Math.max(0, zoneMin - subtotal)
+    };
   }
 
   function renderCart() {
@@ -224,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return `<div class="cart-item">
           <img src="${m.img}" alt="">
           <div>
-            <h4>${m.name}</h4>
+            <h4>${escapeText(m.name)}</h4>
             <p>${formatPrice(m.price)} × ${c.qty} = ${formatPrice(m.price * c.qty)}</p>
             <div class="qty">
               <button data-cdec="${c.id}">−</button>
@@ -237,12 +333,20 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>`;
       }).join('');
     }
-    const { subtotal, total, deliveryFee, isDelivery } = cartTotals();
-    if (cartSubtotalEl) cartSubtotalEl.textContent = formatPrice(subtotal);
-    if (cartDeliveryEl) cartDeliveryEl.textContent = !isDelivery ? 'Pickup — free' : deliveryFee === 0 ? 'Free' : formatPrice(deliveryFee);
-    if (cartTotalEl) cartTotalEl.textContent = formatPrice(total);
-    if (checkoutTotalEl) checkoutTotalEl.textContent = formatPrice(total);
-    if (modalTotalEl) modalTotalEl.textContent = formatPrice(total);
+    const t = cartTotals();
+    if (cartSubtotalEl) cartSubtotalEl.textContent = formatPrice(t.subtotal);
+    if (cartDiscountEl) cartDiscountEl.parentElement.classList.toggle('hidden', !t.discount);
+    if (cartDiscountEl) cartDiscountEl.textContent = '−' + formatPrice(t.discount);
+    if (cartDeliveryEl) cartDeliveryEl.textContent = !t.isDelivery ? 'Pickup — free' : t.deliveryFee === 0 ? 'Free' : formatPrice(t.deliveryFee);
+    if (cartZoneHint) cartZoneHint.textContent = t.zone ? `${t.zone.name} • fee ${formatPrice(t.zoneFee)} • min ${formatPrice(t.zoneMin)}` : '';
+    if (cartZoneHint) cartZoneHint.classList.toggle('hidden', !t.isDelivery || !t.zone);
+    if (cartFreeHint) {
+      if (t.isDelivery && t.remainingForFree > 0) { cartFreeHint.textContent = `Add ${formatPrice(t.remainingForFree)} more for free delivery`; cartFreeHint.classList.remove('hidden'); }
+      else cartFreeHint.classList.add('hidden');
+    }
+    if (cartTotalEl) cartTotalEl.textContent = formatPrice(t.total);
+    if (checkoutTotalEl) checkoutTotalEl.textContent = formatPrice(t.total);
+    if (modalTotalEl) modalTotalEl.textContent = formatPrice(t.total);
     const checkoutBtn = $('#checkout-btn'); if (checkoutBtn) checkoutBtn.disabled = cart.length === 0;
     renderCheckoutSummary();
   }
@@ -261,6 +365,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const isDelivery = document.querySelector('input[name="order-type"]:checked')?.value === 'delivery';
     const addr = $('#checkout-address');
     if (addr) { if (isDelivery) addr.classList.remove('hidden'); else addr.classList.add('hidden'); }
+    const wrap = $('#zone-wrap');
+    if (wrap) { if (isDelivery) { wrap.classList.remove('hidden'); if (zoneSelect) renderZoneOptions(); } else wrap.classList.add('hidden'); }
   }
 
   // Drawer
@@ -275,14 +381,29 @@ document.addEventListener('DOMContentLoaded', () => {
   // Checkout
   const modal = $('#checkout-modal'); const checkoutBtn = $('#checkout-btn'); const modalCancel = $('#modal-cancel'); const checkoutStatus = $('#checkout-status');
   const checkoutForm = $('#checkout-form'); const mockFields = $('#mock-card-fields'); const stripeInfo = $('#stripe-info');
+  const cartPromoInput = $('#cart-promo-code'), cartPromoApply = $('#cart-promo-apply'), cartPromoStatus = $('#cart-promo-status');
+  const checkoutPhoneEl = $('#checkout-phone');
 
-  function renderCheckoutSummary() {
+  function renderCheckoutSummary(phone) {
     const summary = $('#checkout-summary'); if (!summary) return;
     if (cart.length===0) { summary.innerHTML = '<div class="muted">Cart empty</div>'; return; }
-    const { subtotal, deliveryFee, total, isDelivery } = cartTotals();
-    summary.innerHTML = cart.map(c=>{
+    const t = cartTotals(phone);
+    const rows = cart.map(c=>{
       const m=menu.find(x=>x.id===c.id); return `<div><span>${m.name} × ${c.qty}</span><span>${formatPrice(m.price*c.qty)}</span></div>`;
-    }).join('') + `<div style="border-top:1px dashed var(--border); padding-top:0.4rem; margin-top:0.3rem"><span>Subtotal</span><span>${formatPrice(subtotal)}</span></div>` + `<div><span>Delivery ${isDelivery?'(delivery)':'(pickup)'}</span><span>${deliveryFee?formatPrice(deliveryFee):(isDelivery?'Free':'—')}</span></div>` + `<div style="font-weight:800; border-top:1px solid var(--border); padding-top:0.4rem"><span>Total</span><span>${formatPrice(total)}</span></div>`;
+    }).join('');
+    const discountRow = t.discount ? `<div><span>Promo ${escapeText(String(t.coupon.code).toUpperCase())}</span><span>−${formatPrice(t.discount)}</span></div>` : '';
+    const loyaltyRow = t.loyaltyDiscount ? `<div><span>Loyalty (${t.pointsUsed} pts)</span><span>−${formatPrice(t.loyaltyDiscount)}</span></div>` : '';
+    const deliveryLabel = t.isDelivery ? `Delivery${t.zone ? ' — ' + t.zone.name : ''}` : 'Pickup';
+    const deliveryValue = !t.isDelivery ? 'Free' : t.deliveryFee === 0 ? 'Free' : formatPrice(t.deliveryFee);
+    summary.innerHTML = rows
+      + `<div style="border-top:1px dashed var(--border); padding-top:0.4rem; margin-top:0.3rem"><span>Subtotal</span><span>${formatPrice(t.subtotal)}</span></div>`
+      + discountRow + loyaltyRow
+      + `<div><span>${deliveryLabel}</span><span>${deliveryValue}</span></div>`
+      + `<div style="font-weight:800; border-top:1px solid var(--border); padding-top:0.4rem"><span>Total</span><span>${formatPrice(t.total)}</span></div>`
+      + (t.isDelivery && !t.minOrderOk ? `<div class="small" style="color:#ef4444">Min order for this zone is ${formatPrice(t.zoneMin)} — add ${formatPrice(t.remainingForMin)} more.</div>` : '');
+  }
+  function escapeText(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   // Pay method toggle
@@ -302,6 +423,81 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   if (modalCancel && modal) modalCancel.addEventListener('click', ()=> modal.close());
+
+  const promoInput = $('#promo-code'), promoApply = $('#promo-apply'), promoStatus = $('#promo-status');
+  function applyPromo(){
+    if(!promoInput) return;
+    const code = promoInput.value.trim();
+    const status = promoStatus || cartPromoStatus;
+    if(!code){
+      const m = getCartMeta(); delete m.couponCode; saveCartMeta(m);
+      if(status) status.textContent = 'Promo removed';
+      saveCart(); renderCheckoutSummary(checkoutPhoneEl ? checkoutPhoneEl.value.trim() : '');
+      return;
+    }
+    const coupon = findCoupon(code);
+    const meta = getCartMeta();
+    const rawSub = cart.reduce((s, c) => { const m = menu.find(x => x.id === c.id); return s + (m ? m.price * c.qty : 0); }, 0);
+    const res = couponUsable(coupon, rawSub);
+    if(res.ok){ meta.couponCode = String(coupon.code).toUpperCase(); saveCartMeta(meta); }
+    else { delete meta.couponCode; saveCartMeta(meta); }
+    if(status) status.textContent = res.msg;
+    saveCart(); renderCheckoutSummary(checkoutPhoneEl ? checkoutPhoneEl.value.trim() : '');
+  }
+  if (promoApply) promoApply.addEventListener('click', applyPromo);
+  if (promoInput) promoInput.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); applyPromo(); } });
+  if (cartPromoApply) cartPromoApply.addEventListener('click', applyPromo);
+  if (cartPromoInput) cartPromoInput.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); applyPromo(); } });
+
+  const zoneSelect = $('#delivery-zone'), zoneHint = $('#zone-hint'), zoneWrap = $('#zone-wrap');
+  function renderZoneOptions(){
+    if(!zoneSelect) return;
+    const zones = getZones().filter(z => z.active !== false);
+    const current = getCartMeta().zone || '';
+    zoneSelect.innerHTML = '<option value="">Choose your zone…</option>'
+      + zones.map(z=>`<option value="${escapeText(z.id)}" ${z.id===current?'selected':''}>${escapeText(z.name)} — ${formatPrice(z.fee)} (min ${formatPrice(z.min)})</option>`).join('');
+  }
+  if (zoneSelect) {
+    renderZoneOptions();
+    zoneSelect.addEventListener('change', () => {
+      const m = getCartMeta();
+      if(zoneSelect.value) m.zone = zoneSelect.value; else delete m.zone;
+      saveCartMeta(m);
+      saveCart(); renderCheckoutSummary(checkoutPhoneEl ? checkoutPhoneEl.value.trim() : '');
+    });
+  }
+
+  const loyaltyBox = $('#loyalty-box'), loyaltyInfo = $('#loyalty-info'), loyaltyToggle = $('#loyalty-redeem');
+  function renderLoyalty(){
+    if(!loyaltyBox) return;
+    const phone = checkoutPhoneEl ? checkoutPhoneEl.value.trim() : '';
+    const member = getMember(phone);
+    if(!member){
+      loyaltyBox.classList.add('hidden');
+      return;
+    }
+    const redeemable = redeemablePoints(member);
+    loyaltyBox.classList.remove('hidden');
+    loyaltyInfo.textContent = `${member.name} — balance ${member.points} pts (${formatPrice(Math.floor(member.points/REDEEM_POINTS)*REDEEM_VALUE)} value)`;
+    if(loyaltyToggle){
+      loyaltyToggle.disabled = redeemable < REDEEM_POINTS;
+      loyaltyToggle.parentElement.classList.toggle('hidden', redeemable < REDEEM_POINTS);
+      if(redeemable < REDEEM_POINTS) loyaltyToggle.checked = false;
+    }
+    const m = getCartMeta();
+    if(redeemable < REDEEM_POINTS) delete m.redeem;
+    saveCartMeta(m);
+    renderCheckoutSummary(phone);
+  }
+  if (loyaltyToggle) loyaltyToggle.addEventListener('change', () => {
+    const m = getCartMeta();
+    if(loyaltyToggle.checked){ m.redeem = true; m.redeemPoints = Math.min(Number(m.redeemPoints) || redeemablePoints(getMember(checkoutPhoneEl.value.trim())), redeemablePoints(getMember(checkoutPhoneEl.value.trim()))); }
+    else delete m.redeem;
+    if(!m.redeem) delete m.redeemPoints;
+    saveCartMeta(m);
+    renderCheckoutSummary(checkoutPhoneEl.value.trim());
+  });
+  if (checkoutPhoneEl) checkoutPhoneEl.addEventListener('input', renderLoyalty);
   if (modal) modal.addEventListener('click', (e)=>{
     const r=modal.getBoundingClientRect(); if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) modal.close();
   });
@@ -315,9 +511,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const notes=$('#checkout-notes').value.trim();
       const address=$('#checkout-address').value.trim();
       const payMethod=document.querySelector('input[name="pay-method"]:checked')?.value || 'pickup';
-      const { subtotal, deliveryFee, total, isDelivery } = cartTotals();
+      const t = cartTotals(phone);
+      const { subtotal, deliveryFee, total, isDelivery } = t;
       if(!name||!phone||!email){ checkoutStatus.textContent='Please enter name, phone, email.'; return; }
       if(isDelivery && !address){ checkoutStatus.textContent='Delivery address required for delivery.'; return; }
+      if(isDelivery && !t.zone){ checkoutStatus.textContent='Please choose your delivery zone.'; return; }
+      if(isDelivery && !t.minOrderOk){ checkoutStatus.textContent=`Minimum order for ${t.zone.name} is ${formatPrice(t.zoneMin)} — add ${formatPrice(t.remainingForMin)} more.`; return; }
+      const soldOutItem = cart.map(c=>menu.find(x=>x.id===c.id)).find(m=>m && isSoldOut(m));
+      if(soldOutItem){ checkoutStatus.textContent=`${soldOutItem.name} just sold out — please remove it from your cart.`; return; }
       // mock card validation
       if(payMethod==='card-mock'){
         const num=$('#mock-card-number').value.replace(/\s/g,'');
@@ -348,6 +549,12 @@ document.addEventListener('DOMContentLoaded', () => {
         customer: { name, phone, email, address: isDelivery?address:'Pickup' },
         items: cart.map(c=>{ const m=menu.find(x=>x.id===c.id); return { id:c.id, name:m.name, price:m.price, qty:c.qty }; }),
         subtotal, deliveryFee, total,
+        discount: t.discount,
+        couponCode: t.discount ? String(t.coupon.code).toUpperCase() : '',
+        zone: isDelivery && t.zone ? t.zone.id : '',
+        zoneName: isDelivery && t.zone ? t.zone.name : '',
+        loyaltyPointsRedeemed: t.pointsUsed,
+        loyaltyDiscount: t.loyaltyDiscount,
         orderType: isDelivery?'delivery':'pickup',
         paymentMethod: payMethod,
         paymentStatus: payMethod==='pickup'?'pending':'paid',
@@ -355,7 +562,23 @@ document.addEventListener('DOMContentLoaded', () => {
         notes
       };
       const orders=getOrders(); orders.unshift(order); saveOrders(orders);
-      checkoutStatus.textContent=`Order ${orderId} placed! Total ${formatPrice(total)} — ${isDelivery?'Delivery 35-50 min':'Pickup 15 min'}.`;
+      if (t.pointsUsed) {
+        const list = getLoyalty();
+        const m = list.find(x=>x.phone === normalizePhone(phone));
+        if(m){ m.points = Math.max(0, m.points - t.pointsUsed); m.redeemed += t.pointsUsed; saveLoyalty(list); }
+      }
+      let pointsEarned = 0;
+      if (payMethod !== 'pickup') pointsEarned = earnPointsOnOrder(phone, name, total);
+      decrementStock(order.items);
+      if (t.discount && t.coupon) {
+        const coupons = getCoupons();
+        const c = coupons.find(x=>String(x.code).toUpperCase() === String(t.coupon.code).toUpperCase());
+        if(c){ c.used = (c.used||0) + 1; localStorage.setItem(COUPONS_KEY, JSON.stringify(coupons)); }
+      }
+      const cartMeta = getCartMeta();
+      delete cartMeta.couponCode; delete cartMeta.redeem; delete cartMeta.redeemPoints;
+      saveCartMeta(cartMeta);
+      checkoutStatus.textContent=`Order ${orderId} placed! Total ${formatPrice(total)} — ${isDelivery?'Delivery 35-50 min':'Pickup 15 min'}.${pointsEarned ? ` +${pointsEarned} loyalty pts` : ''}`;
       cart=[]; saveCart();
       toast(`Order ${orderId} confirmed †`);
       const printBtn = document.createElement('button');

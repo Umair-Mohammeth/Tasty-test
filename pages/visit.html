@@ -23,12 +23,13 @@
         <a href="menu.html" class="nav-link">Menu</a>
         <a href="story.html" class="nav-link">Story</a>
         <a href="visit.html" class="nav-link" style="color:var(--text)">Visit</a>
+        <a href="track.html" class="nav-link">Track</a>
         <a href="../admin/index.html" class="nav-link" style="opacity:0.6">Admin</a>
         <button id="cart-btn" class="btn btn-cart" aria-label="Open cart">◈ Cart <span id="cart-count" class="cart-count">0</span></button>
         <button id="mobile-toggle" class="mobile-toggle" aria-label="Toggle menu">☰</button>
       </nav>
     </div>
-    <div id="mobile-nav" class="mobile-nav"><a href="../index.html">Home</a><a href="menu.html">Menu</a><a href="story.html">Story</a><a href="visit.html">Visit</a><a href="../admin/index.html">Admin</a></div>
+    <div id="mobile-nav" class="mobile-nav"><a href="../index.html">Home</a><a href="menu.html">Menu</a><a href="story.html">Story</a><a href="visit.html">Visit</a><a href="track.html">Track</a><a href="../admin/index.html">Admin</a></div>
   </header>
 
   <main class="container section">
@@ -50,6 +51,8 @@
         <div style="margin-top:1rem; border-radius:12px; overflow:hidden; border:1px solid var(--border)">
           <img src="https://images.unsplash.com/photo-1521017432531-fbd92d768814?auto=format&fit=crop&w=800&q=80" alt="Map placeholder" style="width:100%; height:200px; object-fit:cover; opacity:0.9">
         </div>
+        <h4 style="margin-top:1.1rem; font-size:0.8rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted)">Delivery zones & rates</h4>
+        <div id="zone-table-wrap"></div>
       </div>
       <form id="contact" class="contact-form" novalidate>
         <h3>Message the Keeper</h3>
@@ -68,6 +71,36 @@
 
   <section class="container section" style="padding-top:0">
     <div class="orders-panel">
+      <div class="section-head" style="margin-bottom:1rem">
+        <p class="eyebrow">BOOK A TABLE</p>
+        <h2 style="font-size:1.6rem">Reserve the Crypt</h2>
+        <p class="muted small">Up to 8 guests, 30-minute slots during opening hours. We'll confirm by phone.</p>
+      </div>
+      <form id="resv-form" style="display:grid; gap:0.7rem; max-width:620px">
+        <div class="form-row">
+          <input type="date" id="resv-date" required aria-label="Date">
+          <select id="resv-guests" required aria-label="Guests">
+            <option value="1">1 guest</option><option value="2" selected>2 guests</option><option value="3">3 guests</option>
+            <option value="4">4 guests</option><option value="5">5 guests</option><option value="6">6 guests</option>
+            <option value="7">7 guests</option><option value="8">8 guests</option>
+          </select>
+        </div>
+        <div id="resv-slots" class="slot-grid" role="group" aria-label="Available time slots"></div>
+        <div class="form-row">
+          <input type="text" id="resv-name" placeholder="Your name *" required aria-label="Your name">
+          <input type="tel" id="resv-phone" placeholder="Phone *" required aria-label="Phone">
+        </div>
+        <input type="email" id="resv-email" placeholder="Email (optional)" aria-label="Email">
+        <input type="text" id="resv-notes" placeholder="Notes — e.g. birthday, high chair" aria-label="Notes">
+        <button type="submit" class="btn btn-primary">Request reservation</button>
+        <p id="resv-status" class="form-status" role="status"></p>
+      </form>
+      <div id="resv-mine" style="margin-top:1.2rem"></div>
+    </div>
+  </section>
+
+  <section class="container section" style="padding-top:0">
+    <div class="orders-panel">
       <h3 style="font-family:Cinzel; font-size:1.2rem; margin-bottom:0.6rem">Newsletter</h3>
       <p class="muted small">Midnight drops, secret menu, no spam.</p>
       <form id="newsletter" class="newsletter" style="margin-top:0.6rem; max-width:400px">
@@ -81,7 +114,7 @@
   <footer class="site-footer">
     <div class="container footer-grid">
       <div><div class="brand footer-brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">EST. 2019</span></span></div><p class="small">© <span id="year"></span> Black Coffin</p></div>
-      <div><h4>Explore</h4><a href="../index.html">Home</a><a href="menu.html">Menu</a><a href="story.html">Story</a><a href="visit.html">Visit</a></div>
+      <div><h4>Explore</h4><a href="../index.html">Home</a><a href="menu.html">Menu</a><a href="story.html">Story</a><a href="visit.html">Visit</a><a href="track.html">Track order</a></div>
       <div><h4>Follow</h4><a href="#">Instagram — @blackcoffin.coffee</a></div>
       <div><h4>Newsletter</h4><p class="muted small">Also join from here — see inbox in Admin.</p></div>
     </div>
@@ -93,9 +126,9 @@
     <div class="cart-head"><h3>Your Coffin <span id="cart-count-drawer" class="muted"></span></h3><button id="cart-close" class="icon-btn" aria-label="Close cart">✕</button></div>
     <div id="cart-items" class="cart-items"><p class="empty-cart">Your coffin is empty.</p></div>
     <div class="cart-foot">
-      <div class="cart-totals"><div><span>Subtotal</span><span id="cart-subtotal">Rs 0</span></div><div><span>Delivery</span><span id="cart-delivery">Pickup — free</span></div><div class="total"><span>Total</span><span id="cart-total">Rs 0</span></div></div>
+      <div class="cart-totals"><div><span>Subtotal</span><span id="cart-subtotal">Rs 0</span></div><div class="hidden" id="cart-discount-row"><span>Promo</span><span id="cart-discount">-Rs 0</span></div><div><span>Delivery</span><span id="cart-delivery">Pickup — free</span></div><div class="total"><span>Total</span><span id="cart-total">Rs 0</span></div></div>
       <div class="cart-options"><label><input type="radio" name="order-type" value="pickup" checked> Pickup (15 min)</label><label><input type="radio" name="order-type" value="delivery"> Delivery (+Rs 450)</label></div>
-      <button id="checkout-btn" class="btn btn-primary full">Checkout • <span id="checkout-total">Rs 0</span></button>
+      <div class="cart-promo"><input id="cart-promo-code" type="text" placeholder="Promo code" aria-label="Promo code"><button id="cart-promo-apply" class="btn btn-ghost small-btn" type="button">Apply</button></div><p id="cart-promo-status" class="form-status small"></p><p id="cart-free-hint" class="small muted hidden"></p><p id="cart-zone-hint" class="small muted hidden"></p><button id="checkout-btn" class="btn btn-primary full">Checkout • <span id="checkout-total">Rs 0</span></button>
     </div>
   </aside>
   <dialog id="checkout-modal" class="modal large">
@@ -103,9 +136,25 @@
       <h3>Almost there ♰</h3>
       <p class="muted small">Pickup in 15 min • Delivery 35-50 min</p>
       <div id="checkout-summary" class="checkout-summary"></div>
-      <div class="form-row"><input type="text" id="checkout-name" placeholder="Full name *" required><input type="tel" id="checkout-phone" placeholder="Phone * � 077 123 4567" required></div>
+      <div class="form-row"><input type="text" id="checkout-name" placeholder="Full name *" required><input type="tel" id="checkout-phone" placeholder="Phone * � 077 123 4567" required></div>
       <input type="email" id="checkout-email" placeholder="Email for receipt *" required>
       <input type="text" id="checkout-address" placeholder="Delivery address — required if delivery" class="hidden" aria-label="Delivery address">
+      <div id="zone-wrap" class="hidden form-group" style="margin-top:0.6rem">
+  <label class="small muted" for="delivery-zone">Delivery zone (Colombo)</label>
+  <select id="delivery-zone" style="width:100%; background:var(--bg-soft); color:var(--text); border:1px solid var(--border); padding:0.55rem 0.7rem; border-radius:8px">
+    <option value="">Choose your zone</option>
+  </select>
+  <p id="zone-hint" class="small muted" style="margin-top:0.3rem"></p>
+</div>
+<div class="cart-promo" style="margin-top:0.6rem">
+  <input id="promo-code" type="text" placeholder="Promo code (optional)" aria-label="Promo code">
+  <button id="promo-apply" class="btn btn-ghost small-btn" type="button">Apply</button>
+</div>
+<p id="promo-status" class="form-status small"></p>
+<div id="loyalty-box" class="hidden small" style="background:var(--accent-ghost); border:1px solid rgba(217,119,6,0.25); padding:0.6rem 0.8rem; border-radius:8px; margin-top:0.5rem">
+  <p id="loyalty-info" style="margin:0"></p>
+  <label class="hidden" style="display:flex; align-items:center; gap:0.4rem; margin-top:0.4rem; cursor:pointer"><input type="checkbox" id="loyalty-redeem" style="width:auto"> Redeem points at checkout</label>
+</div>
       <textarea id="checkout-notes" rows="2" placeholder="Notes"></textarea>
       <div class="pay-methods">
         <p class="eyebrow" style="font-size:0.65rem; margin-bottom:0.4rem">PAYMENT METHOD</p>
@@ -124,5 +173,115 @@
     </form>
   </dialog>
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script>
+    (function(){
+      const RESV_KEY = 'bc-reservations';
+      const ZONES_KEY = 'bc-zones';
+      const SL_TZ = 'Asia/Colombo';
+      const CAPACITY = 4;
+      const lkrFmt = new Intl.NumberFormat('en-LK', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      const money = n => 'Rs ' + lkrFmt.format(Number(n) || 0);
+      const esc = s => String(s === undefined || s === null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      const slDay = d => new Intl.DateTimeFormat('en-CA', { timeZone: SL_TZ, year:'numeric', month:'2-digit', day:'2-digit' }).format(d);
+      const readList = (k, f) => { try{ const p=JSON.parse(localStorage.getItem(k)||'null'); return Array.isArray(p) ? p : f; }catch(e){ return f; } };
+      let selectedSlot = '';
+
+      const dateEl = document.getElementById('resv-date');
+      const slotsEl = document.getElementById('resv-slots');
+      const statusEl = document.getElementById('resv-status');
+      const mineEl = document.getElementById('resv-mine');
+      const form = document.getElementById('resv-form');
+
+      const today = slDay(new Date());
+      dateEl.value = today;
+      dateEl.min = today;
+
+      function slotsFor(){
+        return ['07:30','08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00','21:30','22:00'];
+      }
+
+      function renderSlots(){
+        const date = dateEl.value;
+        if(!date){ slotsEl.innerHTML = ''; return; }
+        const booked = readList(RESV_KEY, []).filter(r => r.date === date && r.status !== 'cancelled' && r.status !== 'declined');
+        const nowKey = slDay(new Date());
+        const past = date < nowKey;
+        slotsEl.innerHTML = slotsFor().map(s => {
+          const used = booked.filter(r => r.slot === s).reduce((t,r) => t + Number(r.guests||0), 0);
+          const full = used >= CAPACITY;
+          const chosen = s === selectedSlot;
+          return `<button type="button" class="slot-btn${chosen ? ' selected' : ''}" data-slot="${s}" ${full || past ? 'disabled' : ''}>${s}${full ? ' full' : ''}</button>`;
+        }).join('');
+        slotsEl.querySelectorAll('[data-slot]').forEach(b => b.addEventListener('click', ()=>{
+          selectedSlot = b.getAttribute('data-slot');
+          renderSlots();
+        }));
+      }
+
+      function renderMine(){
+        const phone = (document.getElementById('resv-phone').value || '').replace(/\D/g,'').slice(-9);
+        const all = readList(RESV_KEY, []);
+        const mine = phone ? all.filter(r => String(r.phone || '').replace(/\D/g,'').slice(-9) === phone) : [];
+        const upcoming = mine.filter(r => r.date >= today && r.status !== 'cancelled');
+        mineEl.innerHTML = upcoming.length ? `<h4 style="font-size:0.8rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:0.4rem">Your upcoming bookings</h4>`
+          + upcoming.map(r => `<div class="resv-row">
+              <div><strong>${esc(r.date)}</strong> • ${esc(r.slot)} • ${esc(r.guests)} guests<div class="small muted">Ref ${esc(r.id)}</div></div>
+              <div style="display:flex; gap:0.5rem; align-items:center">
+                <span class="order-status status-${r.status === 'confirmed' ? 'confirmed' : (r.status === 'declined' ? 'declined' : 'pending')}">${esc(r.status)}</span>
+                <button type="button" class="btn btn-ghost small-btn" data-cancel-resv="${esc(r.id)}">Cancel</button>
+              </div>
+            </div>`).join('')
+          : (mine.length ? '' : '');
+        mineEl.querySelectorAll('[data-cancel-resv]').forEach(b => b.addEventListener('click', ()=>{
+          const list = readList(RESV_KEY, []);
+          const r = list.find(x => x.id === b.getAttribute('data-cancel-resv'));
+          if(r && confirm('Cancel booking ' + r.id + '?')){ r.status = 'cancelled'; localStorage.setItem(RESV_KEY, JSON.stringify(list)); renderMine(); renderSlots(); statusEl.textContent = 'Booking ' + r.id + ' cancelled.'; }
+        }));
+      }
+
+      function renderZoneTable(){
+        const wrap = document.getElementById('zone-table-wrap');
+        if(!wrap) return;
+        const zones = readList(ZONES_KEY, []);
+        wrap.innerHTML = zones.length ? `<table class="zone-table" style="width:100%"><thead><tr><th>Zone</th><th>Fee</th><th>Min order</th></tr></thead><tbody>`
+          + zones.map(z => `<tr><td>${esc(z.name)}</td><td>${money(z.fee)}</td><td>${money(z.min)}</td></tr>`).join('')
+          + `</tbody></table><p class="small muted" style="margin-top:0.4rem">Free delivery over ${money(Math.min.apply(null, zones.map(z=>Number(z.freeOver)||Infinity)))} in selected zone.</p>`
+          : '<p class="small muted">Delivery zone rates are set by the shop.</p>';
+      }
+
+      dateEl.addEventListener('change', ()=>{ selectedSlot=''; renderSlots(); });
+      document.getElementById('resv-phone').addEventListener('input', renderMine);
+
+      form.addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const name = document.getElementById('resv-name').value.trim();
+        const phone = document.getElementById('resv-phone').value.trim();
+        const email = document.getElementById('resv-email').value.trim();
+        const guests = parseInt(document.getElementById('resv-guests').value, 10) || 2;
+        const notes = document.getElementById('resv-notes').value.trim();
+        const date = dateEl.value;
+        if(!name || !phone){ statusEl.textContent = 'Name and phone are required.'; return; }
+        if(!selectedSlot){ statusEl.textContent = 'Please choose a time slot.'; return; }
+        const list = readList(RESV_KEY, []);
+        const used = list.filter(r => r.date === date && r.slot === selectedSlot && r.status !== 'cancelled' && r.status !== 'declined').reduce((t,r) => t + Number(r.guests||0), 0);
+        if(used + guests > CAPACITY){ statusEl.textContent = 'That slot only fits ' + Math.max(0, CAPACITY - used) + ' more guests — please pick another time.'; return; }
+        const rec = {
+          id: 'RSV-' + Date.now().toString().slice(-6),
+          date, slot: selectedSlot, guests, name, phone, email, notes,
+          status: 'pending', created: new Date().toISOString()
+        };
+        list.unshift(rec);
+        localStorage.setItem(RESV_KEY, JSON.stringify(list));
+        statusEl.textContent = 'Request ' + rec.id + ' sent — we will call to confirm ' + date + ' at ' + selectedSlot + '.';
+        form.reset();
+        dateEl.value = today; selectedSlot = '';
+        renderSlots(); renderMine();
+      });
+
+      renderSlots(); renderMine(); renderZoneTable();
+    })();
+  </script>
 </body>
 </html>

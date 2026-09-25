@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Black Coffin — Reports</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <meta name="color-scheme" content="dark">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">REPORTS</span></span></a>
+      <nav class="nav"><span id="sl-clock" class="small muted">Sri Lanka time</span><span id="role-badge" class="badge" style="position:static" hidden></span><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
+    </div>
+  </header>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="index.html">◧ Dashboard</a>
+        <a href="board.html">🧾 Board</a>
+        <a href="orders.html">⬡ Orders</a>
+        <a href="menu.html">◈ Menu</a>
+        <a href="inbox.html">✉ Inbox</a>
+        <a href="reservations.html">🪑 Reservations</a>
+        <a href="coupons.html" data-roles="manager,admin">% Coupons</a>
+        <a href="reports.html" data-roles="manager,admin">▤ Reports</a>
+        <a href="settings.html" data-roles="admin">⚙ Settings</a>
+        <div class="nav-sep"></div>
+        <a href="../index.html">← View site</a>
+      </nav>
+    </aside>
+    <main class="admin-main">
+      <h1 class="admin-page-title">Reports</h1>
+      <p class="admin-page-sub">Sales overview by day, item and fulfilment type. All figures in LKR, days follow Sri Lanka time.</p>
+
+      <div class="board-toolbar">
+        <select id="range" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.5rem 0.7rem; border-radius:8px">
+          <option value="1">Today</option>
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="all">All time</option>
+        </select>
+        <button id="export-csv" class="btn btn-primary small-btn">Export CSV</button>
+        <span class="small muted" id="range-label"></span>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card"><strong id="rp-revenue">Rs 0</strong><span>Revenue</span></div>
+        <div class="stat-card"><strong id="rp-orders">0</strong><span>Orders</span></div>
+        <div class="stat-card"><strong id="rp-aov">Rs 0</strong><span>Avg order</span></div>
+        <div class="stat-card"><strong id="rp-discounts">Rs 0</strong><span>Discounts given</span></div>
+      </div>
+
+      <div class="report-split" style="margin-bottom:1rem">
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
+          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.7rem">Revenue by day</h3>
+          <div class="report-bars" id="rp-days"></div>
+        </div>
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
+          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.7rem">Top items</h3>
+          <div class="report-bars" id="rp-items"></div>
+        </div>
+      </div>
+
+      <div class="report-split">
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
+          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.7rem">Fulfilment split</h3>
+          <div id="rp-split"></div>
+        </div>
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
+          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.7rem">Order status funnel</h3>
+          <div id="rp-funnel"></div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem; margin-top:1rem; overflow:auto">
+        <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.7rem">Orders in range</h3>
+        <table class="admin-table">
+          <thead><tr><th>ID</th><th>Date</th><th>Customer</th><th>Type</th><th>Discount</th><th>Total</th><th>Status</th></tr></thead>
+          <tbody id="rp-tbody"></tbody>
+        </table>
+        <p id="rp-empty" class="muted small center hidden" style="padding:0.8rem">No orders in this range.</p>
+      </div>
+    </main>
+  </div>
+  <script src="admin.js"></script>
+  <script>
+    if(!requireAuth('reports.view')) {} else {
+      const rangeEl = document.getElementById('range');
+      let rows = [];
+
+      function inRange(orders, mode){
+        if(mode === 'all') return orders;
+        const days = parseInt(mode, 10) || 30;
+        const today = new Date();
+        const cutoff = new Date(today.getTime() - (days - 1) * 86400000);
+        const cutoffKey = slDayKey(cutoff.toISOString());
+        return orders.filter(o => slDayKey(o.date) >= cutoffKey);
+      }
+
+      function bars(el, entries, valueFmt){
+        const max = entries.reduce((m,e)=>Math.max(m, e.value), 0) || 1;
+        el.innerHTML = entries.length ? entries.map(e=>`
+          <div class="report-bar-row">
+            <span class="muted">${escapeHtml(e.label)}</span>
+            <span class="report-bar-track"><span class="report-bar-fill" style="width:${Math.max(2, Math.round(e.value/max*100))}%"></span></span>
+            <span class="report-bar-val">${valueFmt(e.value)}</span>
+          </div>`).join('') : '<p class="small muted">No data</p>';
+      }
+
+      function render(){
+        const mode = rangeEl.value || '30';
+        rows = inRange(getOrders(), mode);
+        const revenue = rows.reduce((s,o)=>s + Number(o.total||0), 0);
+        const discounts = rows.reduce((s,o)=>s + Number(o.discount||0) + Number(o.loyaltyDiscount||0), 0);
+        const delivered = rows.filter(o=>o.status==='delivered').length;
+
+        document.getElementById('rp-revenue').textContent = formatPrice(revenue);
+        document.getElementById('rp-orders').textContent = rows.length;
+        document.getElementById('rp-aov').textContent = formatPrice(rows.length ? Math.round(revenue/rows.length) : 0);
+        document.getElementById('rp-discounts').textContent = formatPrice(discounts);
+        document.getElementById('range-label').textContent = rows.length + ' order(s) • ' + delivered + ' delivered';
+
+        const byDay = {};
+        rows.forEach(o => { const k = slDayKey(o.date); byDay[k] = (byDay[k]||0) + Number(o.total||0); });
+        const dayEntries = Object.keys(byDay).sort().slice(-14).map(k => ({ label: k, value: byDay[k] }));
+        bars(document.getElementById('rp-days'), dayEntries, v => formatPrice(v));
+
+        const byItem = {};
+        rows.forEach(o => (o.items||[]).forEach(i => { byItem[i.name] = (byItem[i.name]||0) + Number(i.price||0) * Number(i.qty||0); }));
+        const itemEntries = Object.keys(byItem).map(k=>({ label:k, value: byItem[k] })).sort((a,b)=>b.value-a.value).slice(0,6);
+        bars(document.getElementById('rp-items'), itemEntries, v => formatPrice(v));
+
+        const pickup = rows.filter(o=>o.orderType==='pickup').length;
+        const delivery = rows.length - pickup;
+        document.getElementById('rp-split').innerHTML = `
+          <div class="funnel-row"><span>Pickup</span><strong>${pickup} (${rows.length?Math.round(pickup/rows.length*100):0}%)</strong></div>
+          <div class="funnel-row"><span>Delivery</span><strong>${delivery} (${rows.length?Math.round(delivery/rows.length*100):0}%)</strong></div>
+          <div class="funnel-row"><span>Promo codes used</span><strong>${rows.filter(o=>o.couponCode).length}</strong></div>
+          <div class="funnel-row"><span>Loyalty redeemed</span><strong>${rows.filter(o=>o.loyaltyPointsRedeemed).length}</strong></div>`;
+
+        const statuses = ['pending','preparing','ready','delivered'];
+        document.getElementById('rp-funnel').innerHTML = statuses.map(s=>`
+          <div class="funnel-row"><span>${s}</span><strong>${rows.filter(o=>o.status===s).length}</strong></div>`).join('');
+
+        const tbody = document.getElementById('rp-tbody'), empty = document.getElementById('rp-empty');
+        if(!rows.length){ tbody.innerHTML=''; empty.classList.remove('hidden'); }
+        else {
+          empty.classList.add('hidden');
+          tbody.innerHTML = rows.map(o=>`<tr>
+            <td style="font-family:Cinzel; font-weight:700">${escapeHtml(o.id)}</td>
+            <td class="small muted">${formatSLDateTime(o.date)}</td>
+            <td>${escapeHtml(o.customer.name)}</td>
+            <td class="small muted">${escapeHtml(o.orderType)}${o.zoneName ? ' — ' + escapeHtml(o.zoneName) : ''}</td>
+            <td class="small muted">${o.discount || o.loyaltyDiscount ? formatPrice(Number(o.discount||0) + Number(o.loyaltyDiscount||0)) : '—'}</td>
+            <td style="font-weight:700">${formatPrice(o.total)}</td>
+            <td><span class="order-status status-${o.status}" style="font-size:0.65rem">${escapeHtml(o.status)}</span></td>
+          </tr>`).join('');
+        }
+      }
+
+      document.getElementById('export-csv').addEventListener('click', ()=>{
+        if(!rows.length){ alert('No orders in this range to export.'); return; }
+        const head = ['Order ID','Date (SLST)','Customer','Phone','Type','Zone','Subtotal','Discount','Loyalty','Delivery','Total','Payment','Status'];
+        const esc = v => '"' + String(v === undefined || v === null ? '' : v).replace(/"/g,'""') + '"';
+        const lines = [head.join(',')].concat(rows.map(o => [
+          o.id, formatSLDateTime(o.date), o.customer.name, o.customer.phone, o.orderType, o.zoneName || '',
+          o.subtotal, Number(o.discount||0) + Number(o.loyaltyDiscount||0), o.loyaltyPointsRedeemed || 0,
+          o.deliveryFee, o.total, o.paymentMethod, o.status
+        ].map(esc).join(',')));
+        const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'black-coffin-report.csv'; a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      rangeEl.addEventListener('change', render);
+      window.addEventListener('storage', e => { if(e.key === ORDERS_KEY) render(); });
+      render();
+    }
+  </script>
+</body>
+</html>
