@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Black Coffin — Settings</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <meta name="color-scheme" content="dark">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">SETTINGS</span></span></a>
+      <nav class="nav"><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
+    </div>
+  </header>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="index.html">◧ Dashboard</a>
+        <a href="menu.html">◈ Menu</a>
+        <a href="orders.html">⬡ Orders</a>
+        <a href="inbox.html">✉ Inbox</a>
+        <a href="settings.html">⚙ Settings</a>
+        <div class="nav-sep"></div>
+        <a href="../index.html">← View site</a>
+      </nav>
+    </aside>
+    <main class="admin-main">
+      <h1 class="admin-page-title">Settings</h1>
+      <p class="admin-page-sub">Static site — no backend. Data lives in browser storage.</p>
+
+      <div style="display:grid; gap:1rem">
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
+          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.6rem">Store</h3>
+          <p class="small muted">13 Raven Alley, Downtown — Open 07:00-23:00 — (555) 013-1313</p>
+          <p class="small muted" style="margin-top:0.4rem">Edit hours/address in <code>index.html</code> Visit section.</p>
+        </div>
+
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
+          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.6rem">Data & Export</h3>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+            <button id="export-btn" class="btn btn-primary small-btn">Export all JSON</button>
+            <button id="export-menu" class="btn btn-ghost small-btn">Export menu</button>
+            <button id="clear-all" class="btn" style="border-color:#ef4444; color:#ef4444">Clear ALL data</button>
+          </div>
+          <p class="small muted" style="margin-top:0.6rem">Includes orders, menu, messages, newsletter. Clear wipes <code>bc-orders</code>/<code>bc-menu</code>/<code>bc-messages</code>/<code>bc-newsletter</code>.</p>
+        </div>
+
+        <div style="background:var(--accent-ghost); border:1px solid rgba(217,119,6,0.25); padding:1rem; border-radius:14px">
+          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.4rem">Payments — Static Mock</h3>
+          <p class="small muted">Checkout offers <em>Pay on pickup</em> + <em>Card mock (4242...)</em> + <em>Stripe mock</em>. No real charge, no backend, no install needed.</p>
+          <p class="small muted" style="margin-top:0.4rem">Test card: <code>4242 4242 4242 4242</code> • any exp/CVC • Works offline by double-clicking HTML files.</p>
+        </div>
+
+        <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem">
+          <h3 style="font-family:Cinzel; font-size:0.95rem; margin-bottom:0.6rem">Admin Access</h3>
+          <p class="small muted">Password is <code>coffin123</code> set in <code>admin/admin.js</code> <code>ADMIN_PASS</code>. Change it there and redeploy. Auth uses <code>sessionStorage bc-admin</code>.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="admin.js"></script>
+  <script>
+    if(!requireAuth()) {} else {
+      document.getElementById('export-menu').addEventListener('click', ()=>{
+        const blob=new Blob([JSON.stringify(getMenu(), null, 2)], {type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='black-coffin-menu.json'; a.click(); URL.revokeObjectURL(url);
+      });
+      document.getElementById('clear-all').addEventListener('click', ()=>{
+        if(confirm('Clear ALL — orders, menu, messages, newsletter?')){
+          localStorage.removeItem('bc-orders'); localStorage.removeItem('bc-menu'); localStorage.removeItem('bc-messages'); localStorage.removeItem('bc-newsletter'); alert('Cleared. Reload pages to see defaults.');
+        }
+      });
+    }
+  </script>
+</body>
+</html>

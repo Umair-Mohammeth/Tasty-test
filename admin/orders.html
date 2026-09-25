@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Black Coffin — Orders</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <meta name="color-scheme" content="dark">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">ORDERS</span></span></a>
+      <nav class="nav"><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
+    </div>
+  </header>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="index.html">◧ Dashboard</a>
+        <a href="menu.html">◈ Menu</a>
+        <a href="orders.html">⬡ Orders</a>
+        <a href="inbox.html">✉ Inbox</a>
+        <a href="settings.html">⚙ Settings</a>
+        <div class="nav-sep"></div>
+        <a href="../index.html">← View site</a>
+      </nav>
+    </aside>
+    <main class="admin-main">
+      <h1 class="admin-page-title">Orders</h1>
+      <p class="admin-page-sub">Search, update status, delete — stored in <code>bc-orders</code>.</p>
+
+      <div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-bottom:1rem">
+        <input id="admin-search" placeholder="Search — id, name, phone..." style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.9rem; border-radius:999px; min-width:240px; flex:1; max-width:320px">
+        <button id="seed-btn" class="btn btn-ghost small-btn">Seed demo</button>
+        <span id="orders-count" class="small muted" style="align-self:center"></span>
+      </div>
+
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem; overflow:auto">
+        <table class="admin-table">
+          <thead><tr><th>ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Pay</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="orders-tbody"></tbody>
+        </table>
+        <p id="no-orders" class="small muted center" style="padding:1rem">No orders yet.</p>
+      </div>
+    </main>
+  </div>
+  <script src="admin.js"></script>
+  <script>
+    if(!requireAuth()) {} else {
+      function render(){
+        const orders=getOrders();
+        const q=(document.getElementById('admin-search').value||'').toLowerCase();
+        const filtered=orders.filter(o=> !q || o.id.toLowerCase().includes(q) || o.customer.name.toLowerCase().includes(q) || o.customer.phone.includes(q) || o.items.map(i=>i.name).join(' ').toLowerCase().includes(q));
+        document.getElementById('orders-count').textContent = filtered.length + ' / ' + orders.length;
+        const tb=document.getElementById('orders-tbody'), empty=document.getElementById('no-orders');
+        if(filtered.length===0){ tb.innerHTML=''; empty.classList.remove('hidden'); return; }
+        empty.classList.add('hidden');
+        tb.innerHTML=filtered.map(o=>`
+          <tr>
+            <td style="font-family:Cinzel; font-weight:700">${o.id}</td>
+            <td>${new Date(o.date).toLocaleString()}</td>
+            <td><div style="font-weight:600">${o.customer.name}</div><div class="small muted">${o.customer.phone}<br>${o.customer.email}</div><div class="small muted">${o.customer.address}</div></td>
+            <td style="max-width:220px">${o.items.map(i=>`${i.name}×${i.qty}`).join('<br>')}<div class="small muted">${o.notes||''}</div></td>
+            <td style="font-weight:700">$${o.total.toFixed(2)}<div class="small muted">${o.orderType}</div></td>
+            <td><div>${o.paymentMethod}</div><div class="small muted">${o.paymentStatus}</div></td>
+            <td><select data-status="${o.id}" style="background:var(--bg-soft); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:0.3rem">
+              <option ${o.status==='pending'?'selected':''}>pending</option><option ${o.status==='preparing'?'selected':''}>preparing</option><option ${o.status==='ready'?'selected':''}>ready</option><option ${o.status==='delivered'?'selected':''}>delivered</option>
+            </select></td>
+            <td><button data-del="${o.id}" style="background:transparent; border:1px solid var(--border); color:#ef4444; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer">Delete</button></td>
+          </tr>
+        `).join('');
+        tb.querySelectorAll('select[data-status]').forEach(s=> s.addEventListener('change', e=>{
+          const id=e.target.getAttribute('data-status'); const all=getOrders(); const o=all.find(x=>x.id===id); if(o){ o.status=e.target.value; saveOrders(all); render(); }
+        }));
+        tb.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', ()=>{ const id=b.getAttribute('data-del'); if(confirm('Delete '+id+'?')){ saveOrders(getOrders().filter(o=>o.id!==id)); render(); } }));
+      }
+      document.getElementById('admin-search').addEventListener('input', render);
+      document.getElementById('seed-btn').addEventListener('click', ()=>{ const o=getOrders(); o.unshift({ id:'BC-SEED'+Math.floor(Math.random()*9000), date:new Date().toISOString(), customer:{name:'Demo Guest', phone:'555-0100', email:'demo@test.com', address:'Pickup'}, items:[{id:'midnight', name:'Midnight Espresso', price:4.5, qty:2}], subtotal:9, deliveryFee:0, total:9, orderType:'pickup', paymentMethod:'card-mock', paymentStatus:'paid', status:'pending', notes:'seed' }); saveOrders(o); render(); });
+      render();
+    }
+  </script>
+</body>
+</html>

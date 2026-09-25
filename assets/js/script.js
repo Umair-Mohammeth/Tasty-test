@@ -1,0 +1,357 @@
+// Black Coffin — Menu + Cart + Mock Stripe (static: HTML/CSS/JS only, no backend)
+document.addEventListener('DOMContentLoaded', () => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+  const yearEl = $('#year');
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+  const mobileToggle = $('#mobile-toggle');
+  const mobileNav = $('#mobile-nav');
+  if (mobileToggle && mobileNav) {
+    mobileToggle.addEventListener('click', () => mobileNav.classList.toggle('open'));
+  }
+
+  const MENU_KEY = 'bc-menu';
+  const DEFAULT_MENU = [
+    { id: 'midnight', name: 'Midnight Espresso', price: 4.5, cat: 'espresso', badge: 'House', desc: 'Double shot, dark chocolate, smoked cherry. Our signature.', img: 'https://images.unsplash.com/photo-1510707577719-ae7c14805e3a?auto=format&fit=crop&w=600&q=80' },
+    { id: 'obsidian', name: 'Obsidian Latte', price: 6.0, cat: 'espresso', desc: 'Activated charcoal, oat milk, vanilla — black as night.', img: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=600&q=80' },
+    { id: 'coffin', name: 'The Coffin Cold Brew', price: 5.5, cat: 'cold', badge: 'Best Seller', desc: '24h steeped, nitrogen chilled, velvet finish.', img: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=600&q=80' },
+    { id: 'raven', name: 'Raven Mocha', price: 6.5, cat: 'espresso', desc: 'Dark cocoa, espresso, oat milk, whisper of sea salt.', img: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&w=600&q=80' },
+    { id: 'soul', name: 'Soul Filter — Ethiopia', price: 5.0, cat: 'brew', desc: 'Washed, light-dark. Jasmine, bergamot, honey.', img: 'https://images.unsplash.com/photo-1498804103079-a6351b050096?auto=format&fit=crop&w=600&q=80' },
+    { id: 'hex', name: 'Hex Pour-Over', price: 5.5, cat: 'brew', badge: 'Single Origin', desc: 'Colombia Huila, 1:16, 96°C. Ritual brewed at bar.', img: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=600&q=80' },
+    { id: 'black-tonic', name: 'Black Tonic', price: 6.0, cat: 'cold', desc: 'Espresso + tonic + lime. Bitter, bright, possessed.', img: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80' },
+    { id: 'ash-croissant', name: 'Ash Croissant', price: 4.0, cat: 'pastry', desc: 'Charcoal croissant, almond frangipane, dusted black.', img: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=600&q=80' },
+    { id: 'velvet-brownie', name: 'Velvet Brownie', price: 4.5, cat: 'pastry', badge: 'Vegan', desc: '70% dark, sea salt, walnut. No compromise.', img: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=600&q=80' },
+    { id: 'mourning-bun', name: 'Mourning Cinnamon Bun', price: 5.0, cat: 'pastry', desc: 'Black sugar glaze, cardamom, sticky & dark.', img: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80' },
+    { id: 'penance', name: 'Penance Americano', price: 4.0, cat: 'espresso', desc: 'Straight, hot, honest. No milk, no mercy.', img: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=600&q=80' },
+    { id: 'nocturne', name: 'Nocturne Iced Latte', price: 6.0, cat: 'cold', desc: 'Oat milk, midnight espresso, vanilla cold foam.', img: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=600&q=80' },
+  ];
+  function loadMenu(){ try{ const v=localStorage.getItem(MENU_KEY); if(v){ const p=JSON.parse(v); if(Array.isArray(p)&&p.length) return p; } }catch(e){} return JSON.parse(JSON.stringify(DEFAULT_MENU)); }
+  function saveMenu(m){ localStorage.setItem(MENU_KEY, JSON.stringify(m)); }
+  let menu = loadMenu();
+  let lastMenuJSON = JSON.stringify(menu);
+  function checkMenuUpdate(){
+    try{
+      const cur = localStorage.getItem(MENU_KEY);
+      const curJSON = cur ? cur : JSON.stringify(DEFAULT_MENU);
+      if(curJSON !== lastMenuJSON){
+        const parsed = cur ? JSON.parse(cur) : null;
+        if(Array.isArray(parsed) && parsed.length){ menu = parsed; } else { menu = JSON.parse(JSON.stringify(DEFAULT_MENU)); }
+        lastMenuJSON = JSON.stringify(menu);
+        renderMenu(); renderCart();
+        // optional toast for debug: console.log('menu updated');
+      }
+    }catch(e){}
+  }
+  // keep menu in sync if admin changes it in another tab/window
+  window.addEventListener('storage', (e)=>{ if(e.key===MENU_KEY || e.key===null){ checkMenuUpdate(); } });
+  window.addEventListener('focus', checkMenuUpdate);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkMenuUpdate(); });
+  window.addEventListener('pageshow', checkMenuUpdate);
+  // polling for cross-page sync when storage event doesn't fire
+  setInterval(checkMenuUpdate, 800);
+
+  const grid = $('#menu-grid');
+  const emptyEl = $('#menu-empty');
+  const searchEl = $('#menu-search');
+  const filterBtns = $$('.filter-btn');
+  let activeFilter = 'all';
+  let searchQuery = '';
+
+  const CART_KEY = 'bc-cart';
+  const ORDERS_KEY = 'bc-orders';
+  let cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+  const pendingQty = {};
+
+  function saveCart() {
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    renderCart();
+  }
+  function getOrders() { return JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]'); }
+  function saveOrders(orders) { localStorage.setItem(ORDERS_KEY, JSON.stringify(orders)); renderOrdersHistory(); }
+
+  function formatPrice(n) { return `$${n.toFixed(2)}`; }
+  function filteredMenu() {
+    return menu.filter(m => {
+      const matchCat = activeFilter === 'all' || m.cat === activeFilter;
+      const q = searchQuery.trim().toLowerCase();
+      const matchSearch = !q || m.name.toLowerCase().includes(q) || m.desc.toLowerCase().includes(q);
+      return matchCat && matchSearch;
+    });
+  }
+  function renderMenu() {
+    if (!grid) return;
+    const items = filteredMenu();
+    grid.innerHTML = '';
+    if (items.length === 0) { emptyEl.classList.remove('hidden'); return; }
+    emptyEl.classList.add('hidden');
+    items.forEach(item => {
+      const qty = pendingQty[item.id] || 1;
+      const card = document.createElement('article');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-img">
+          <img src="${item.img}" alt="${item.name}" loading="lazy">
+          ${item.badge ? `<span class="badge">${item.badge}</span>` : ''}
+        </div>
+        <div class="card-body">
+          <div class="card-top">
+            <h3>${item.name}</h3>
+            <span class="price">${formatPrice(item.price)}</span>
+          </div>
+          <p class="card-desc">${item.desc}</p>
+          <div class="card-foot">
+            <div class="qty-ctrl">
+              <button aria-label="Decrease quantity" data-dec="${item.id}">−</button>
+              <span data-qty="${item.id}">${qty}</span>
+              <button aria-label="Increase quantity" data-inc="${item.id}">+</button>
+            </div>
+            <button class="btn btn-primary add-btn" data-add="${item.id}">Add • ${formatPrice(item.price * qty)}</button>
+          </div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  if (grid) {
+    grid.addEventListener('click', (e) => {
+      const inc = e.target.closest('[data-inc]');
+      const dec = e.target.closest('[data-dec]');
+      const add = e.target.closest('[data-add]');
+      if (inc) { const id = inc.getAttribute('data-inc'); pendingQty[id] = Math.min(9, (pendingQty[id] || 1) + 1); renderMenu(); }
+      else if (dec) { const id = dec.getAttribute('data-dec'); pendingQty[id] = Math.max(1, (pendingQty[id] || 1) - 1); renderMenu(); }
+      else if (add) { const id = add.getAttribute('data-add'); const qty = pendingQty[id] || 1; addToCart(id, qty); toast(`${qty} × ${menu.find(m=>m.id===id).name} added`); }
+    });
+  }
+  filterBtns.forEach(btn => btn.addEventListener('click', () => {
+    filterBtns.forEach(b => b.classList.remove('active')); btn.classList.add('active'); activeFilter = btn.dataset.filter; renderMenu();
+  }));
+  if (searchEl) searchEl.addEventListener('input', () => { searchQuery = searchEl.value; renderMenu(); });
+  function addToCart(id, qty) { const ex = cart.find(c => c.id === id); if (ex) ex.qty += qty; else cart.push({ id, qty }); saveCart(); }
+
+  const cartItemsEl = $('#cart-items');
+  const cartCountEl = $('#cart-count');
+  const cartCountDrawerEl = $('#cart-count-drawer');
+  const cartSubtotalEl = $('#cart-subtotal');
+  const cartTotalEl = $('#cart-total');
+  const checkoutTotalEl = $('#checkout-total');
+  const modalTotalEl = $('#modal-total');
+
+  function cartTotals() {
+    const subtotal = cart.reduce((s, c) => { const m = menu.find(x => x.id === c.id); return s + (m ? m.price * c.qty : 0); }, 0);
+    const isDelivery = document.querySelector('input[name="order-type"]:checked')?.value === 'delivery';
+    const deliveryFee = isDelivery && subtotal > 0 ? 3.5 : 0;
+    return { subtotal, deliveryFee, total: subtotal + deliveryFee, isDelivery };
+  }
+
+  function renderCart() {
+    // purge cart items whose menu entry was deleted
+    const before = cart.length;
+    cart = cart.filter(c=> menu.some(m=>m.id===c.id));
+    if(cart.length!==before) saveCart();
+    if (!cartItemsEl) return;
+    const totalQty = cart.reduce((s, c) => s + c.qty, 0);
+    if (cartCountEl) cartCountEl.textContent = totalQty;
+    if (cartCountDrawerEl) cartCountDrawerEl.textContent = totalQty ? `(${totalQty})` : '';
+    if (cart.length === 0) cartItemsEl.innerHTML = '<p class="empty-cart">Your coffin is empty. Add something dark.</p>';
+    else {
+      cartItemsEl.innerHTML = cart.map(c => {
+        const m = menu.find(x => x.id === c.id);
+        if(!m) return '';
+        return `<div class="cart-item">
+          <img src="${m.img}" alt="">
+          <div>
+            <h4>${m.name}</h4>
+            <p>${formatPrice(m.price)} × ${c.qty} = ${formatPrice(m.price * c.qty)}</p>
+            <div class="qty">
+              <button data-cdec="${c.id}">−</button>
+              <span>${c.qty}</span>
+              <button data-cinc="${c.id}">+</button>
+              <button class="remove" data-cremove="${c.id}">Remove</button>
+            </div>
+          </div>
+          <strong>${formatPrice(m.price * c.qty)}</strong>
+        </div>`;
+      }).join('');
+    }
+    const { subtotal, total } = cartTotals();
+    if (cartSubtotalEl) cartSubtotalEl.textContent = formatPrice(subtotal);
+    if (cartTotalEl) cartTotalEl.textContent = formatPrice(total);
+    if (checkoutTotalEl) checkoutTotalEl.textContent = formatPrice(total);
+    if (modalTotalEl) modalTotalEl.textContent = formatPrice(total);
+    const checkoutBtn = $('#checkout-btn'); if (checkoutBtn) checkoutBtn.disabled = cart.length === 0;
+    renderCheckoutSummary();
+  }
+
+  if (cartItemsEl) {
+    cartItemsEl.addEventListener('click', (e) => {
+      const inc = e.target.closest('[data-cinc]'); const dec = e.target.closest('[data-cdec]'); const rem = e.target.closest('[data-cremove]');
+      if (inc) { const item = cart.find(c=>c.id===inc.getAttribute('data-cinc')); if(item){ item.qty=Math.min(9,item.qty+1); saveCart(); } }
+      else if (dec) { const item = cart.find(c=>c.id===dec.getAttribute('data-cdec')); if(item){ item.qty-=1; if(item.qty<=0) cart=cart.filter(c=>c.id!==item.id); saveCart(); } }
+      else if (rem) { cart=cart.filter(c=>c.id!==rem.getAttribute('data-cremove')); saveCart(); }
+    });
+  }
+  $$('input[name="order-type"]').forEach(r => r.addEventListener('change', () => { saveCart(); toggleAddress(); }));
+
+  function toggleAddress() {
+    const isDelivery = document.querySelector('input[name="order-type"]:checked')?.value === 'delivery';
+    const addr = $('#checkout-address');
+    if (addr) { if (isDelivery) addr.classList.remove('hidden'); else addr.classList.add('hidden'); }
+  }
+
+  // Drawer
+  const drawer = $('#cart-drawer'); const overlay = $('#cart-overlay'); const cartBtn = $('#cart-btn'); const cartClose = $('#cart-close');
+  function openCart() { drawer.classList.add('open'); overlay.classList.remove('hidden'); drawer.setAttribute('aria-hidden','false'); overlay.setAttribute('aria-hidden','false'); }
+  function closeCart() { drawer.classList.remove('open'); overlay.classList.add('hidden'); drawer.setAttribute('aria-hidden','true'); overlay.setAttribute('aria-hidden','true'); }
+  if (cartBtn) cartBtn.addEventListener('click', openCart);
+  if (cartClose) cartClose.addEventListener('click', closeCart);
+  if (overlay) overlay.addEventListener('click', closeCart);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeCart(); });
+
+  // Checkout
+  const modal = $('#checkout-modal'); const checkoutBtn = $('#checkout-btn'); const modalCancel = $('#modal-cancel'); const checkoutStatus = $('#checkout-status');
+  const checkoutForm = $('#checkout-form'); const mockFields = $('#mock-card-fields'); const stripeInfo = $('#stripe-info');
+
+  function renderCheckoutSummary() {
+    const summary = $('#checkout-summary'); if (!summary) return;
+    if (cart.length===0) { summary.innerHTML = '<div class="muted">Cart empty</div>'; return; }
+    const { subtotal, deliveryFee, total, isDelivery } = cartTotals();
+    summary.innerHTML = cart.map(c=>{
+      const m=menu.find(x=>x.id===c.id); return `<div><span>${m.name} × ${c.qty}</span><span>${formatPrice(m.price*c.qty)}</span></div>`;
+    }).join('') + `<div style="border-top:1px dashed var(--border); padding-top:0.4rem; margin-top:0.3rem"><span>Subtotal</span><span>${formatPrice(subtotal)}</span></div>` + `<div><span>Delivery ${isDelivery?'(delivery)':'(pickup)'}</span><span>${deliveryFee?formatPrice(deliveryFee):'—'}</span></div>` + `<div style="font-weight:800; border-top:1px solid var(--border); padding-top:0.4rem"><span>Total</span><span>${formatPrice(total)}</span></div>`;
+  }
+
+  // Pay method toggle
+  $$('input[name="pay-method"]').forEach(r=>{
+    r.addEventListener('change', ()=>{
+      const v = document.querySelector('input[name="pay-method"]:checked')?.value;
+      if (mockFields) mockFields.classList.toggle('hidden', v!=='card-mock');
+      if (stripeInfo) stripeInfo.classList.toggle('hidden', v!=='stripe');
+    });
+  });
+
+  if (checkoutBtn && modal) {
+    checkoutBtn.addEventListener('click', () => {
+      if (cart.length===0) { toast('Cart is empty'); return; }
+      closeCart(); toggleAddress(); renderCheckoutSummary();
+      if (typeof modal.showModal==='function') modal.showModal(); else modal.setAttribute('open','');
+    });
+  }
+  if (modalCancel && modal) modalCancel.addEventListener('click', ()=> modal.close());
+  if (modal) modal.addEventListener('click', (e)=>{
+    const r=modal.getBoundingClientRect(); if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) modal.close();
+  });
+
+  if (checkoutForm) {
+    checkoutForm.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const name=$('#checkout-name').value.trim();
+      const phone=$('#checkout-phone').value.trim();
+      const email=$('#checkout-email').value.trim();
+      const notes=$('#checkout-notes').value.trim();
+      const address=$('#checkout-address').value.trim();
+      const payMethod=document.querySelector('input[name="pay-method"]:checked')?.value || 'pickup';
+      const { subtotal, deliveryFee, total, isDelivery } = cartTotals();
+      if(!name||!phone||!email){ checkoutStatus.textContent='Please enter name, phone, email.'; return; }
+      if(isDelivery && !address){ checkoutStatus.textContent='Delivery address required for delivery.'; return; }
+      // mock card validation
+      if(payMethod==='card-mock'){
+        const num=$('#mock-card-number').value.replace(/\s/g,'');
+        const exp=$('#mock-exp').value.trim();
+        const cvc=$('#mock-cvc').value.trim();
+        if(!num || !exp || !cvc){ checkoutStatus.textContent='Please enter mock card details.'; return; }
+        if(num!=='4242424242424242'){ checkoutStatus.textContent='Mock card declined — use 4242 4242 4242 4242'; return; }
+      }
+      checkoutStatus.textContent = payMethod==='stripe' ? 'Redirecting to Stripe (mock)...' : 'Processing payment...';
+      const placeBtn=$('#place-order'); if(placeBtn) placeBtn.disabled=true;
+
+      // Static-only: mock Stripe / card — no backend required
+      if(payMethod==='stripe'){
+        await sleep(1000);
+        checkoutStatus.textContent='Stripe mock — no backend. Simulating success...';
+        await sleep(600);
+      } else if(payMethod==='card-mock'){
+        await sleep(1200);
+      } else {
+        await sleep(600);
+      }
+
+      // Create order
+      const orderId = `BC-${Date.now().toString().slice(-6)}${Math.floor(100+Math.random()*900)}`;
+      const order = {
+        id: orderId,
+        date: new Date().toISOString(),
+        customer: { name, phone, email, address: isDelivery?address:'Pickup' },
+        items: cart.map(c=>{ const m=menu.find(x=>x.id===c.id); return { id:c.id, name:m.name, price:m.price, qty:c.qty }; }),
+        subtotal, deliveryFee, total,
+        orderType: isDelivery?'delivery':'pickup',
+        paymentMethod: payMethod,
+        paymentStatus: payMethod==='pickup'?'pending':'paid',
+        status: 'pending',
+        notes
+      };
+      const orders=getOrders(); orders.unshift(order); saveOrders(orders);
+      checkoutStatus.textContent=`Order ${orderId} placed! Total ${formatPrice(total)} — ${isDelivery?'Delivery 35-50 min':'Pickup 15 min'}.`;
+      cart=[]; saveCart();
+      toast(`Order ${orderId} confirmed †`);
+      setTimeout(()=>{ modal.close(); checkoutStatus.textContent=''; checkoutForm.reset(); if(mockFields) mockFields.classList.add('hidden'); if(stripeInfo) stripeInfo.classList.add('hidden'); if(placeBtn) placeBtn.disabled=false; }, 2200);
+      if(placeBtn) placeBtn.disabled=false;
+    });
+  }
+
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  // Orders history
+  const ordersListEl = $('#orders-list'); const clearOrdersBtn = $('#clear-orders');
+  function renderOrdersHistory(){
+    if(!ordersListEl) return;
+    const orders=getOrders();
+    if(orders.length===0){ ordersListEl.innerHTML='<p class="muted small center" style="padding:1rem">No orders yet. Your coffin is empty.</p>'; return; }
+    ordersListEl.innerHTML = orders.map(o=>{
+      const date=new Date(o.date).toLocaleString();
+      const items=o.items.map(i=>`${i.name} ×${i.qty}`).join(', ');
+      return `<div class="order-card">
+        <div class="order-card-head">
+          <span class="order-id">${o.id}</span>
+          <span class="order-status status-${o.status}">${o.status}</span>
+        </div>
+        <div class="small muted">${date} • ${o.orderType} • ${o.paymentMethod} • ${o.paymentStatus}</div>
+        <div class="order-items">${items}</div>
+        <div style="display:flex; justify-content:space-between; font-weight:700; font-size:0.85rem"><span>${o.customer.name}</span><span>${formatPrice(o.total)}</span></div>
+      </div>`;
+    }).join('');
+  }
+  if(clearOrdersBtn) clearOrdersBtn.addEventListener('click', ()=>{ if(confirm('Clear all order history?')){ localStorage.removeItem(ORDERS_KEY); renderOrdersHistory(); toast('History cleared'); } });
+
+  // Contact
+  const contactForm=$('#contact'); const formStatus=$('#form-status');
+  if(contactForm) contactForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const name=$('#contact-name').value.trim(); const email=$('#contact-email').value.trim(); const msg=$('#contact-msg').value.trim();
+    if(!name||!email||!msg){ formStatus.textContent='Please fill all required fields.'; return; }
+    const msgs=JSON.parse(localStorage.getItem('bc-messages')||'[]'); msgs.unshift({ name,email,subject:$('#contact-subject').value.trim(),msg,date:new Date().toISOString() }); localStorage.setItem('bc-messages', JSON.stringify(msgs));
+    formStatus.textContent='Sending...'; setTimeout(()=>{ formStatus.textContent='Message sent — we reply within hours.'; contactForm.reset(); }, 500);
+  });
+  // Newsletter
+  const newsletter=$('#newsletter'); const newsletterStatus=$('#newsletter-status');
+  if(newsletter) newsletter.addEventListener('submit', (e)=>{
+    e.preventDefault(); const email=newsletter.querySelector('input[type="email"]').value.trim(); if(!email) return;
+    const list=JSON.parse(localStorage.getItem('bc-newsletter')||'[]'); if(!list.includes(email)){ list.push(email); localStorage.setItem('bc-newsletter', JSON.stringify(list)); }
+    newsletterStatus.textContent="You're in. Check email for 10% off."; newsletter.reset(); setTimeout(()=>newsletterStatus.textContent='',4000);
+  });
+  // Toast
+  const toastEl=$('#toast'); let toastTimer; function toast(msg){ if(!toastEl) return; toastEl.textContent=msg; toastEl.classList.remove('hidden'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toastEl.classList.add('hidden'), 2400); }
+
+  // expose for admin + allow admin to force refresh
+  window.BC_MENU = menu;
+  window.BC_LOAD_MENU = ()=>{ menu=loadMenu(); return menu; };
+  window.BC_SAVE_MENU = saveMenu;
+  window.BC_DEFAULT_MENU = DEFAULT_MENU;
+  window.BC_CHECK_MENU = checkMenuUpdate;
+  // init
+  renderMenu(); renderCart(); renderOrdersHistory();
+  // force check shortly after load
+  setTimeout(checkMenuUpdate, 300);
+});

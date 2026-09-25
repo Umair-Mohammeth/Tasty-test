@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Black Coffin — Admin Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <meta name="color-scheme" content="dark">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="../index.html" class="brand">
+        <span class="brand-mark">†</span>
+        <span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">ADMIN</span></span>
+      </a>
+      <nav class="nav"><a href="../index.html" class="nav-link">← Back to site</a></nav>
+    </div>
+  </header>
+  <main class="container">
+    <div class="login-card" style="margin-top:3rem">
+      <h2 style="font-family:Cinzel">Keeper Login</h2>
+      <p class="muted small">Default: <code>coffin123</code> — change <code>ADMIN_PASS</code> in <code>admin/admin.js</code></p>
+      <input type="password" id="admin-pass" placeholder="Password" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.7rem 0.9rem; border-radius:10px">
+      <button id="login-btn" class="btn btn-primary">Enter Crypt</button>
+      <p id="login-status" class="form-status"></p>
+      <p class="small muted">Static demo auth (sessionStorage). For production use real auth.</p>
+    </div>
+  </main>
+  <script src="admin.js"></script>
+  <script>
+    const passEl=document.getElementById('admin-pass'), btn=document.getElementById('login-btn'), statusEl=document.getElementById('login-status');
+    if(isAuthed()) location.href='index.html';
+    btn.addEventListener('click', ()=>{
+      if(passEl.value===ADMIN_PASS){ sessionStorage.setItem('bc-admin','1'); location.href='index.html'; }
+      else statusEl.textContent='Wrong password.';
+    });
+    passEl.addEventListener('keydown', e=>{ if(e.key==='Enter') btn.click(); });
+  </script>
+</body>
+</html>

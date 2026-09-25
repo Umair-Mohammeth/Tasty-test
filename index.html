@@ -3,65 +3,226 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My Simple Page</title>
-  <meta name="description" content="A minimal starter web page.">
-  <link rel="stylesheet" href="styles.css">
+  <title>Black Coffin — Brewed in Darkness</title>
+  <meta name="description" content="Black Coffin Coffee — Gothic specialty coffee shop. Dark roasts, cold brews & artisan pastries.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
   <link rel="icon" href="data:,">
-  <meta name="color-scheme" content="light dark">
-  <script src="script.js" defer></script>
-  <!--
-    Build on this simple, responsive starter. Keep it lightweight and accessible.
-  -->
-  <style>
-    /* Fallback critical styles if CSS fails to load */
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji"; margin: 0; }
-  </style>
-  
-  <!-- Open Graph (optional) -->
-  <meta property="og:title" content="My Simple Page">
-  <meta property="og:description" content="A clean, responsive starter you can build on.">
+  <meta name="color-scheme" content="dark">
+  <script src="assets/js/script.js" defer></script>
 </head>
 <body>
+  <div class="top-bar">
+    <div class="container top-bar-inner">
+      <span>◼ Open daily 07:00 — 23:00 • Free delivery over $35</span>
+      <span class="top-bar-right">📍 13 Raven Alley, Downtown • ☎ (555) 013-1313</span>
+    </div>
+  </div>
+
   <header class="site-header">
     <div class="container header-inner">
-      <h1 class="site-title">My Simple Page</h1>
+      <a href="index.html" class="brand" aria-label="Black Coffin home">
+        <span class="brand-mark">†</span>
+        <span class="brand-text">
+          <span class="brand-name">BLACK COFFIN</span>
+          <span class="brand-sub">COFFEE & SHADOWS</span>
+        </span>
+      </a>
       <nav class="nav" aria-label="Primary">
-        <a href="#features">Features</a>
-        <a href="#contact">Contact</a>
-        <button id="theme-toggle" class="btn" aria-pressed="false" title="Toggle color theme">Toggle theme</button>
+        <a href="index.html" class="nav-link" style="color:var(--text)">Home</a>
+        <a href="pages/menu.html" class="nav-link">Menu</a>
+        <a href="pages/story.html" class="nav-link">Story</a>
+        <a href="pages/visit.html" class="nav-link">Visit</a>
+        <a href="admin/index.html" class="nav-link" style="opacity:0.6">Admin</a>
+        <button id="cart-btn" class="btn btn-cart" aria-label="Open cart">
+          <span class="cart-icon">◈</span> Cart <span id="cart-count" class="cart-count">0</span>
+        </button>
+        <button id="mobile-toggle" class="mobile-toggle" aria-label="Toggle menu">☰</button>
       </nav>
+    </div>
+    <div id="mobile-nav" class="mobile-nav">
+      <a href="index.html">Home</a>
+      <a href="pages/menu.html">Menu</a>
+      <a href="pages/story.html">Story</a>
+      <a href="pages/visit.html">Visit</a>
+      <a href="admin/index.html">Admin</a>
     </div>
   </header>
 
-  <main class="container">
-    <section class="hero" aria-labelledby="hero-title">
-      <h2 id="hero-title">Welcome</h2>
-      <p>A clean, responsive starter you can build on.</p>
-      <button id="cta" class="btn primary">Say hi</button>
-    </section>
+  <section class="hero">
+    <div class="hero-bg" aria-hidden="true"></div>
+    <div class="container hero-inner">
+      <p class="eyebrow">— EST. 2019 • DARK ROASTED • DOWNTOWN —</p>
+      <h1 class="hero-title">
+        BREWED IN<br>
+        <span class="accent">DARKNESS.</span><br>
+        SERVED WITH SOUL.
+      </h1>
+      <p class="hero-desc">Gothic specialty coffee for night owls, creatives & the beautifully damned. Small-batch roasted, ritual-brewed.</p>
+      <div class="hero-actions">
+        <a href="pages/menu.html" class="btn btn-primary">Order Now — Menu</a>
+        <a href="pages/story.html" class="btn btn-ghost">Explore the Ritual</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><strong>4.9★</strong><span>2.4k reviews</span></div>
+        <div class="stat"><strong>30k+</strong><span>cups this month</span></div>
+        <div class="stat"><strong>#1</strong><span>dark roast in city</span></div>
+      </div>
+    </div>
+  </section>
 
-    <section id="features" class="features" aria-labelledby="features-title">
-      <h2 id="features-title" class="sr-only">Features</h2>
-      <article class="card">
-        <h3>Fast</h3>
-        <p>No frameworks, just HTML, CSS, and JS.</p>
-      </article>
-      <article class="card">
-        <h3>Responsive</h3>
-        <p>Looks great on phones and desktops.</p>
-      </article>
-      <article class="card">
-        <h3>Accessible</h3>
-        <p>Semantic markup and high contrast.</p>
-      </article>
-    </section>
-  </main>
+  <section class="features-bar">
+    <div class="container features-grid">
+      <div class="feature"><span class="feature-icon">◐</span><div><h3>Small-Batch Roasted</h3><p>Roasted in-house every 48h</p></div></div>
+      <div class="feature"><span class="feature-icon">⬢</span><div><h3>Direct Trade</h3><p>Ethiopia • Colombia • Sumatra</p></div></div>
+      <div class="feature"><span class="feature-icon">✦</span><div><h3>Open Till Midnight</h3><p>For the night shift & night thoughts</p></div></div>
+    </div>
+  </section>
+
+  <section class="container section">
+    <div class="story-inner" style="display:grid; grid-template-columns:1fr 1fr; gap:2.5rem; align-items:center">
+      <div class="story-text">
+        <p class="eyebrow">OUR STORY</p>
+        <h2>We don't do pumpkin spice.</h2>
+        <p>Black Coffin was born in a basement on Raven Alley — one 5kg roaster, a cracked leather couch, and a refusal to serve bad coffee.</p>
+        <a href="pages/story.html" class="btn btn-ghost">Read the full ritual →</a>
+      </div>
+      <div class="story-image" style="border-radius:14px; overflow:hidden; border:1px solid var(--border)">
+        <img src="https://images.unsplash.com/photo-1445116572660-236099ec97a0?auto=format&fit=crop&w=800&q=80" alt="Dark coffee shop interior" loading="lazy" style="width:100%; height:300px; object-fit:cover">
+      </div>
+    </div>
+  </section>
+
+  <section class="container section" style="padding-top:0">
+    <div class="orders-panel" style="text-align:center">
+      <p class="eyebrow">THE GRIMOIRE</p>
+      <h2 style="font-family:Cinzel; margin:0.4rem 0">Menu of Shadows</h2>
+      <p class="muted">12 ritual brews & pastries — updated live from Admin.</p>
+      <a href="pages/menu.html" class="btn btn-primary" style="margin-top:0.8rem">View full menu & order →</a>
+    </div>
+  </section>
+
+  <section class="container section" style="padding-top:0">
+    <div class="visit-grid">
+      <div class="visit-card">
+        <h3>Visit the Crypt</h3>
+        <p class="muted">13 Raven Alley, Downtown<br>Behind the old cinema, black awning.</p>
+        <div class="hours">
+          <div><span>Mon – Thu</span><span>07:00 – 23:00</span></div>
+          <div><span>Fri – Sat</span><span>07:00 – 01:00</span></div>
+          <div><span>Sun</span><span>08:00 – 22:00</span></div>
+        </div>
+        <a href="pages/visit.html" class="btn btn-ghost full">Hours, map & contact →</a>
+      </div>
+      <div class="visit-card">
+        <h3>Your orders</h3>
+        <p class="muted">Track pickup/delivery, re-order, view history.</p>
+        <div id="orders-list" class="orders-list" style="max-height:220px; margin:0.8rem 0">
+          <p class="muted small center" style="padding:1rem">No orders yet. Order from <a href="pages/menu.html" style="color:var(--accent-light)">Menu</a>.</p>
+        </div>
+        <button id="clear-orders" class="btn btn-ghost small-btn" style="font-size:0.75rem">Clear history</button>
+      </div>
+    </div>
+  </section>
 
   <footer class="site-footer">
-    <div class="container">
-      <small>© <span id="year"></span> Your Name</small>
+    <div class="container footer-grid">
+      <div>
+        <div class="brand footer-brand">
+          <span class="brand-mark">†</span>
+          <span class="brand-text">
+            <span class="brand-name">BLACK COFFIN</span>
+            <span class="brand-sub">EST. 2019</span>
+          </span>
+        </div>
+        <p class="muted small">Dark roast. Dark humor. No decaf after 6PM.</p>
+        <p class="small">© <span id="year"></span> Black Coffin Coffee Co.</p>
+      </div>
+      <div>
+        <h4>Explore</h4>
+        <a href="index.html">Home</a>
+        <a href="pages/menu.html">Menu</a>
+        <a href="pages/story.html">Story</a>
+        <a href="pages/visit.html">Visit</a>
+      </div>
+      <div>
+        <h4>Follow the smoke</h4>
+        <a href="#">Instagram — @blackcoffin.coffee</a>
+        <a href="#">TikTok</a>
+        <a href="mailto:hello@blackcoffin.coffee">hello@blackcoffin.coffee</a>
+      </div>
+      <div>
+        <h4>Newsletter</h4>
+        <p class="muted small">Midnight drops, secret menu, no spam.</p>
+        <form id="newsletter" class="newsletter">
+          <input type="email" placeholder="your@email.com" required aria-label="Email for newsletter">
+          <button type="submit" class="btn btn-primary small-btn">Join</button>
+        </form>
+        <p id="newsletter-status" class="form-status small"></p>
+      </div>
     </div>
   </footer>
+
+  <!-- Shared cart/checkout/toast (required on every site page for JS) -->
+  <div id="cart-overlay" class="cart-overlay hidden" aria-hidden="true"></div>
+  <aside id="cart-drawer" class="cart-drawer" aria-label="Shopping cart" aria-hidden="true">
+    <div class="cart-head">
+      <h3>Your Coffin <span id="cart-count-drawer" class="muted"></span></h3>
+      <button id="cart-close" class="icon-btn" aria-label="Close cart">✕</button>
+    </div>
+    <div id="cart-items" class="cart-items">
+      <p class="empty-cart">Your coffin is empty. Add something dark.</p>
+    </div>
+    <div class="cart-foot">
+      <div class="cart-totals">
+        <div><span>Subtotal</span><span id="cart-subtotal">$0.00</span></div>
+        <div><span>Delivery</span><span id="cart-delivery">Calculated at checkout</span></div>
+        <div class="total"><span>Total</span><span id="cart-total">$0.00</span></div>
+      </div>
+      <div class="cart-options">
+        <label><input type="radio" name="order-type" value="pickup" checked> Pickup (15 min)</label>
+        <label><input type="radio" name="order-type" value="delivery"> Delivery (+$3.50)</label>
+      </div>
+      <button id="checkout-btn" class="btn btn-primary full">Checkout • <span id="checkout-total">$0.00</span></button>
+      <p class="small muted center">Secure checkout • Pay on pickup or card</p>
+    </div>
+  </aside>
+  <dialog id="checkout-modal" class="modal large">
+    <form method="dialog" class="modal-inner" id="checkout-form">
+      <h3>Almost there ♰</h3>
+      <p class="muted small">Pickup in 15 min • Delivery 35-50 min</p>
+      <div id="checkout-summary" class="checkout-summary"></div>
+      <div class="form-row">
+        <input type="text" id="checkout-name" placeholder="Full name *" required>
+        <input type="tel" id="checkout-phone" placeholder="Phone *" required>
+      </div>
+      <input type="email" id="checkout-email" placeholder="Email for receipt *" required>
+      <input type="text" id="checkout-address" placeholder="Delivery address — required if delivery" class="hidden" aria-label="Delivery address">
+      <textarea id="checkout-notes" rows="2" placeholder="Notes — e.g. 'extra hot, no sugar'"></textarea>
+      <div class="pay-methods">
+        <p class="eyebrow" style="font-size:0.65rem; margin-bottom:0.4rem">PAYMENT METHOD</p>
+        <label class="pay-option"><input type="radio" name="pay-method" value="pickup" checked> <span>Pay on pickup / cash on delivery</span></label>
+        <label class="pay-option"><input type="radio" name="pay-method" value="card-mock"> <span>Pay with card (mock)</span> <span class="badge" style="position:static; font-size:0.6rem">TEST</span></label>
+        <label class="pay-option"><input type="radio" name="pay-method" value="stripe"> <span>Pay with Stripe</span> <span class="muted small">— mock</span></label>
+      </div>
+      <div id="mock-card-fields" class="hidden" style="display:grid; gap:0.5rem; background:var(--bg-soft); padding:0.8rem; border-radius:10px; border:1px solid var(--border)">
+        <p class="small muted">Mock card — use <code>4242 4242 4242 4242</code></p>
+        <input type="text" id="mock-card-number" placeholder="Card number — 4242 4242 4242 4242" maxlength="19" inputmode="numeric">
+        <div class="form-row">
+          <input type="text" id="mock-exp" placeholder="MM/YY" maxlength="5">
+          <input type="text" id="mock-cvc" placeholder="CVC" maxlength="4" inputmode="numeric">
+        </div>
+      </div>
+      <div id="stripe-info" class="hidden small muted" style="background:var(--accent-ghost); padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(217,119,6,0.25)">Static mock — no backend.</div>
+      <div class="modal-actions">
+        <button type="button" id="modal-cancel" class="btn btn-ghost">Cancel</button>
+        <button type="submit" id="place-order" class="btn btn-primary">Place Order • <span id="modal-total">$0.00</span></button>
+      </div>
+      <p id="checkout-status" class="form-status"></p>
+    </form>
+  </dialog>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 </body>
 </html>
-

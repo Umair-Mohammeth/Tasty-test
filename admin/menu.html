@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Black Coffin — Menu Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <meta name="color-scheme" content="dark">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand"><span class="brand-mark">†</span><span class="brand-text"><span class="brand-name">BLACK COFFIN</span><span class="brand-sub">MENU</span></span></a>
+      <nav class="nav"><a href="../index.html" class="nav-link">Site</a><button id="admin-logout" class="btn btn-ghost">Logout</button></nav>
+    </div>
+  </header>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="index.html">◧ Dashboard</a>
+        <a href="menu.html">◈ Menu</a>
+        <a href="orders.html">⬡ Orders</a>
+        <a href="inbox.html">✉ Inbox</a>
+        <a href="settings.html">⚙ Settings</a>
+        <div class="nav-sep"></div>
+        <a href="../index.html">← View site</a>
+      </nav>
+    </aside>
+    <main class="admin-main">
+      <h1 class="admin-page-title">Menu Manager</h1>
+      <p class="admin-page-sub">Add / remove / rename / move / change items — saved to <code>bc-menu</code>. Site updates on next load.</p>
+
+      <div style="display:flex; gap:0.5rem; margin-bottom:0.8rem; flex-wrap:wrap">
+        <button id="menu-reset" class="btn btn-ghost small-btn">Reset to default</button>
+        <button id="menu-export" class="btn btn-ghost small-btn">Export menu JSON</button>
+        <span id="menu-count" class="small muted" style="align-self:center"></span>
+      </div>
+
+      <form id="menu-form" style="display:grid; gap:0.6rem; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:0.9rem; margin-bottom:1rem">
+        <input type="hidden" id="m-edit-id">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.6rem">
+          <input id="m-name" placeholder="Name * — Midnight Espresso" required style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+          <input id="m-price" type="number" step="0.01" min="0" placeholder="Price * — 4.50" required style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+          <select id="m-cat" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+            <option value="espresso">espresso</option><option value="brew">brew</option><option value="cold">cold</option><option value="pastry">pastry</option>
+          </select>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.6rem">
+          <input id="m-badge" placeholder="Badge — House / Vegan" style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+          <input id="m-img" placeholder="Image URL — https://..." style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px">
+        </div>
+        <textarea id="m-desc" rows="2" placeholder="Description * — Double shot, dark chocolate..." required style="background:var(--bg); border:1px solid var(--border); color:var(--text); padding:0.55rem 0.8rem; border-radius:8px; resize:vertical"></textarea>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+          <button type="submit" id="menu-save" class="btn btn-primary">Add item</button>
+          <button type="button" id="menu-cancel" class="btn btn-ghost hidden">Cancel edit</button>
+          <span id="menu-form-status" class="small muted" style="align-self:center"></span>
+        </div>
+      </form>
+
+      <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:1rem; overflow:auto">
+        <table class="admin-table" id="menu-table">
+          <thead><tr><th>#</th><th>Image</th><th>Name / ID</th><th>Cat</th><th>Price</th><th>Badge</th><th style="min-width:260px">Actions</th></tr></thead>
+          <tbody id="menu-tbody"></tbody>
+        </table>
+        <p id="menu-empty" class="muted small center hidden" style="padding:0.8rem">No items.</p>
+      </div>
+    </main>
+  </div>
+  <script src="admin.js"></script>
+  <script>
+    if(!requireAuth()) {} else {
+      const form=document.getElementById('menu-form'), editIdEl=document.getElementById('m-edit-id'), nameEl=document.getElementById('m-name'), priceEl=document.getElementById('m-price'), catEl=document.getElementById('m-cat'), badgeEl=document.getElementById('m-badge'), descEl=document.getElementById('m-desc'), imgEl=document.getElementById('m-img'), statusEl=document.getElementById('menu-form-status');
+      function render(){
+        const menu=getMenu();
+        document.getElementById('menu-count').textContent = menu.length + ' items';
+        const tbody=document.getElementById('menu-tbody'), empty=document.getElementById('menu-empty');
+        if(menu.length===0){ tbody.innerHTML=''; empty.classList.remove('hidden'); return; }
+        empty.classList.add('hidden');
+        tbody.innerHTML = menu.map((m,i)=>`
+          <tr>
+            <td>${i+1}</td>
+            <td><img src="${m.img}" alt="" style="width:44px; height:44px; object-fit:cover; border-radius:6px; border:1px solid var(--border)"></td>
+            <td><div style="font-weight:600">${m.name}</div><div class="small muted" style="font-family:monospace">${m.id}</div><div class="small muted" style="max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${m.desc}</div></td>
+            <td><span class="small" style="background:var(--bg-soft); border:1px solid var(--border); padding:0.15rem 0.4rem; border-radius:999px">${m.cat}</span></td>
+            <td style="font-weight:700">$${Number(m.price).toFixed(2)}</td>
+            <td class="small muted">${m.badge||'—'}</td>
+            <td>
+              <div style="display:flex; gap:0.3rem; flex-wrap:wrap">
+                <button data-edit="${m.id}" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Edit</button>
+                <button data-dup="${m.id}" style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Dup</button>
+                <button data-up="${m.id}" ${i===0?'disabled':''} style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.4rem; border-radius:6px; cursor:pointer">↑</button>
+                <button data-down="${m.id}" ${i===menu.length-1?'disabled':''} style="background:var(--bg-soft); border:1px solid var(--border); color:var(--text); padding:0.25rem 0.4rem; border-radius:6px; cursor:pointer">↓</button>
+                <button data-del-m="${m.id}" style="background:transparent; border:1px solid var(--border); color:#ef4444; padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; font-size:0.75rem">Del</button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+        tbody.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click', ()=> startEdit(b.getAttribute('data-edit'))));
+        tbody.querySelectorAll('[data-dup]').forEach(b=> b.addEventListener('click', ()=>{
+          const id=b.getAttribute('data-dup'); const menu=getMenu(); const m=menu.find(x=>x.id===id); if(!m) return;
+          const copy={...m, id: slugify(m.name+'-copy'), name: m.name+' Copy'}; let nid=copy.id, n=1; while(menu.some(x=>x.id===nid)) nid=copy.id+'-'+n++; copy.id=nid; menu.splice(menu.findIndex(x=>x.id===id)+1,0,copy); saveMenu(menu); render();
+        }));
+        tbody.querySelectorAll('[data-up]').forEach(b=> b.addEventListener('click', ()=>{ const id=b.getAttribute('data-up'); const menu=getMenu(); const idx=menu.findIndex(x=>x.id===id); if(idx>0){ const tmp=menu[idx-1]; menu[idx-1]=menu[idx]; menu[idx]=tmp; saveMenu(menu); render(); } }));
+        tbody.querySelectorAll('[data-down]').forEach(b=> b.addEventListener('click', ()=>{ const id=b.getAttribute('data-down'); const menu=getMenu(); const idx=menu.findIndex(x=>x.id===id); if(idx<menu.length-1){ const tmp=menu[idx+1]; menu[idx+1]=menu[idx]; menu[idx]=tmp; saveMenu(menu); render(); } }));
+        tbody.querySelectorAll('[data-del-m]').forEach(b=> b.addEventListener('click', ()=>{ const id=b.getAttribute('data-del-m'); if(confirm(`Delete "${id}"?`)){ saveMenu(getMenu().filter(x=>x.id!==id)); render(); } }));
+      }
+      function startEdit(id){
+        const m=getMenu().find(x=>x.id===id); if(!m) return;
+        editIdEl.value=m.id; nameEl.value=m.name; priceEl.value=m.price; catEl.value=m.cat; badgeEl.value=m.badge||''; descEl.value=m.desc; imgEl.value=m.img||'';
+        document.getElementById('menu-save').textContent='Save changes'; document.getElementById('menu-cancel').classList.remove('hidden'); statusEl.textContent=`Editing ${id}`;
+        form.scrollIntoView({behavior:'smooth', block:'center'});
+      }
+      document.getElementById('menu-cancel').addEventListener('click', ()=>{ editIdEl.value=''; form.reset(); document.getElementById('menu-save').textContent='Add item'; document.getElementById('menu-cancel').classList.add('hidden'); statusEl.textContent=''; });
+      form.addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const name=nameEl.value.trim(), price=parseFloat(priceEl.value), cat=catEl.value, badge=badgeEl.value.trim(), desc=descEl.value.trim(), img=imgEl.value.trim() || 'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=600&q=80';
+        if(!name||!desc||isNaN(price)){ statusEl.textContent='Name, price, description required.'; return; }
+        const menu=getMenu(); const editingId=editIdEl.value.trim();
+        if(editingId){
+          const idx=menu.findIndex(x=>x.id===editingId); if(idx===-1){ statusEl.textContent='Not found.'; return; }
+          let newId=slugify(name); if(newId!==editingId && menu.some(x=>x.id===newId)){ statusEl.textContent='Name/id collision.'; return; }
+          menu[idx]={id:newId,name,price,cat,badge,desc,img}; saveMenu(menu); render(); editIdEl.value=''; form.reset(); document.getElementById('menu-save').textContent='Add item'; document.getElementById('menu-cancel').classList.add('hidden'); statusEl.textContent=`Updated "${name}"`;
+        } else {
+          let id=slugify(name); let base=id, n=1; while(menu.some(x=>x.id===id)) id=base+'-'+n++; menu.push({id,name,price,cat,badge,desc,img}); saveMenu(menu); render(); form.reset(); statusEl.textContent=`Added "${name}"`;
+        }
+      });
+      document.getElementById('menu-reset').addEventListener('click', ()=>{ if(confirm('Reset to default 12 items?')){ localStorage.removeItem(MENU_KEY); render(); statusEl.textContent='Reset.'; } });
+      document.getElementById('menu-export').addEventListener('click', ()=>{ const blob=new Blob([JSON.stringify(getMenu(), null, 2)], {type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='black-coffin-menu.json'; a.click(); URL.revokeObjectURL(url); });
+      render();
+    }
+  </script>
+</body>
+</html>
